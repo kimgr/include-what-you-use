@@ -43,6 +43,9 @@
 // The '...*' is just a normal '.*'.  The extra dots are added to improve
 // readability.
 
+// iwyutest.iwyu_flags: --mapping_file=tests/cxx/badinc.imp
+
+
 #define USED_INC    "tests/cxx/badinc-d4.h"
 #define UNUSED_INC  <locale>
 

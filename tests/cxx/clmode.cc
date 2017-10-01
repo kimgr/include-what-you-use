@@ -10,6 +10,8 @@
 // This test will be executed with --driver-mode=cl and some MSVC-shaped
 // flags to ensure we can run IWYU with MSVC-compatible command-line switches.
 
+// iwyutest.clang_flags: --driver-mode=cl /GF /Os /W2
+
 #include "tests/cxx/direct.h"
 
 // This use isn't really important, we just want to make sure IWYU does

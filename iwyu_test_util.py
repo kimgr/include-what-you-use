@@ -30,6 +30,8 @@ import os
 import re
 import subprocess
 import sys
+import shlex
+import pprint
 
 # These are the warning/error lines that iwyu.cc produces when --verbose >= 3
 _EXPECTED_DIAGNOSTICS_RE = re.compile(r'^\s*//\s*IWYU:\s*(.*)$')
@@ -45,6 +47,42 @@ _ACTUAL_SUMMARY_START_RE = re.compile(r'^(.*?) should add these lines:$')
 _ACTUAL_SUMMARY_END_RE = re.compile(r'^---$')
 _ACTUAL_REMOVAL_LIST_START_RE = re.compile(r'.* should remove these lines:$')
 _NODIFFS_RE = re.compile(r'^\((.*?) has correct #includes/fwd-decls\)$')
+
+
+class Setting(object):
+  """ A single test setting with pattern matching and type translation """
+
+  def __init__(self, pattern, default, parse=None):
+    self.pattern = re.compile(pattern)
+    self.value = default
+    self.type_ = type(default)
+    self.parse = parse or (lambda v: v)
+
+  def evaluate(self, line):
+    m = self.pattern.match(line)
+    if m:
+      v = self.parse(m.group(1))
+      assert isinstance(v, self.type_)
+      self.value = v
+
+
+class TestContext(object):
+  """ Parses and carries test metadata for an individual test file """
+
+  def __init__(self, filename):
+    self.filename = filename
+    self.CLANG_FLAGS = Setting(r'^// it.clang_flags: (.*)', [], shlex.split)
+    self.IWYU_FLAGS = Setting(r'^// it.iwyu_flags: (.*)', [], shlex.split)
+    self.ABSPATH = Setting(r'^// it.abspath: (.*)', False, bool)
+
+    self.parse_settings(filename)
+
+  def parse_settings(self, filename):
+    with open(filename, 'r') as file:
+      for line in file:
+        self.CLANG_FLAGS.evaluate(line)
+        self.IWYU_FLAGS.evaluate(line)
+        self.ABSPATH.evaluate(line)
 
 
 def _PortableNext(iterator):
@@ -162,9 +200,12 @@ def _GetExpectedDiagnosticRegexes(spec_loc_to_line):
     path, line_num = loc
     next_line_loc = path, line_num + 1
     if next_line_loc not in spec_loc_to_line:
-      expected_diagnostic_regexes[next_line_loc] = regexes
+      kpath, kline = next_line_loc
+      kline_loc = os.path.basename(kpath), kline
+      expected_diagnostic_regexes[kline_loc] = regexes
       regexes = []
 
+  print('expected_diagnostic_regexes: %s' % pprint.pformat(expected_diagnostic_regexes))
   return expected_diagnostic_regexes
 
 
@@ -178,13 +219,14 @@ def _GetActualDiagnostics(actual_output):
     m = _ACTUAL_DIAGNOSTICS_RE.match(line.strip())
     if m:
       path, line_num, message = m.groups()
-      loc = path, int(line_num)
+      loc = os.path.basename(path), int(line_num)
       actual_diagnostics[loc] = actual_diagnostics.get(loc, []) + [message]
 
   locs = actual_diagnostics.keys()
   for loc in locs:
     actual_diagnostics[loc] = sorted(set(actual_diagnostics[loc]))
 
+  print('actual_diagnostics: %s' % pprint.pformat(actual_diagnostics))
   return actual_diagnostics
 
 
@@ -271,21 +313,24 @@ def _GetExpectedSummaries(files):
     for line in fh:
       if _EXPECTED_SUMMARY_START_RE.match(line):
         in_summary = True
-        expected_summaries[f] = []
+        expected_summaries[os.path.basename(f)] = []
       elif _EXPECTED_SUMMARY_END_RE.match(line):
         in_summary = False
       elif re.match(r'^\s*//', line):
         pass   # ignore comment lines
       elif in_summary:
-        expected_summaries[f].append(line)
+        line = line.replace(f, os.path.basename(f))
+        expected_summaries[os.path.basename(f)].append(line)
     fh.close()
-
+    
   # Get rid of blank lines at the beginning and end of the each summary.
   for loc in expected_summaries:
     while expected_summaries[loc] and expected_summaries[loc][-1] == '\n':
       expected_summaries[loc].pop()
     while expected_summaries[loc] and expected_summaries[loc][0] == '\n':
       expected_summaries[loc].pop(0)
+
+  # print('expected_summaries: %s' % pprint.pformat(expected_summaries))
 
   return expected_summaries
 
@@ -300,14 +345,18 @@ def _GetActualSummaries(output):
     # For files with no diffs, we print a different (one-line) summary.
     m = _NODIFFS_RE.match(line)
     if m:
-      actual_summaries[m.group(1)] = [line]
+      filename = m.group(1)
+      basename = os.path.basename(filename)
+      actual_summaries[basename] = [line.replace(filename, basename)]
       continue
 
     m = _ACTUAL_SUMMARY_START_RE.match(line)
     if m:
       file_being_summarized = m.group(1)
       in_addition_section = True
-      actual_summaries[file_being_summarized] = [line]
+
+      line = line.replace(file_being_summarized, os.path.basename(file_being_summarized))
+      actual_summaries[os.path.basename(file_being_summarized)] = [line]
     elif _ACTUAL_SUMMARY_END_RE.match(line):
       file_being_summarized = None
     elif file_being_summarized:
@@ -323,8 +372,11 @@ def _GetActualSummaries(output):
         line = _StripCommentFromLine(line)
       else:
         line = _NormalizeSummaryLine(line)
-      actual_summaries[file_being_summarized].append(line)
 
+      line = line.replace(file_being_summarized, os.path.basename(file_being_summarized))
+      actual_summaries[os.path.basename(file_being_summarized)].append(line)
+
+  # print('actual_summaries: %s' % pprint.pformat(actual_summaries))
   return actual_summaries
 
 
@@ -434,7 +486,7 @@ def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
     _ShellQuote(_GetIwyuPath()),
     ' '.join(iwyu_flags),
     ' '.join(clang_flags),
-    cc_file)
+    os.path.abspath(cc_file))
   if verbose:
     print('>>> Running %s' % cmd)
   output = _GetCommandOutput(cmd)

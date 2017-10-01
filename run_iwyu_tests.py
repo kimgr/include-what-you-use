@@ -62,7 +62,7 @@ class OneIwyuTest(unittest.TestCase):
     # key=cc-filename (relative to self.rootdir), value=list of flags.
     flags_map = {
       'backwards_includes.cc': [self.CheckAlsoExtension('-d*.h')],
-      'badinc.cc': [self.MappingFile('badinc.imp')],
+        # 'badinc.cc': [self.MappingFile('badinc.imp')],
       'check_also.cc': [self.CheckAlsoExtension('-d1.h')],
       'implicit_ctor.cc': [self.CheckAlsoExtension('-d1.h')],
       'iwyu_stricter_than_cpp.cc': [self.CheckAlsoExtension('-autocast.h'),
@@ -93,7 +93,7 @@ class OneIwyuTest(unittest.TestCase):
       'auto_type_within_template.cc': ['-std=c++11'],
       # MSVC targets need to explicitly enable exceptions, so we do it for all.
       'catch.cc': ['-fcxx-exceptions', '-fexceptions'],
-      'clmode.cc': ['--driver-mode=cl', '/GF', '/Os', '/W2'],
+      # 'clmode.cc': ['--driver-mode=cl', '/GF', '/Os', '/W2'],
       'conversion_ctor.cc': ['-std=c++11'],
       'deleted_implicit.cc' : ['-std=c++11'],
       'funcptrs.cc': ['-Wno-unused'],
@@ -215,8 +215,8 @@ class OneIwyuTest(unittest.TestCase):
     # in the same way here.
     files_to_check = [PosixPath(f) for f in files_to_check]
 
-    iwyu_flags = self._iwyu_flags_map.get(filename, None)
-    clang_flags = self._clang_flags_map.get(filename, [])
+    iwyu_flags = self._iwyu_flags_map.get(filename, []) + self.context.IWYU_FLAGS.value
+    clang_flags = self._clang_flags_map.get(filename, []) + self.context.CLANG_FLAGS.value
     clang_flags.extend(self._include_map.get(filename, []))
     iwyu_test_util.TestIwyuOnRelativeFile(self, filename, files_to_check,
                                           iwyu_flags, clang_flags, verbose=True)
@@ -244,13 +244,16 @@ def RegisterFilesForTesting(rootdir, pattern):
     while class_name in module.__dict__:   # already have a class with that name
       class_name += '2'                    # just append a suffix :-)
 
+    context = iwyu_test_util.TestContext(filename)
+
     logging.info('Registering %s to test %s', class_name, filename)
     test_class = type(class_name,          # class name
                       (OneIwyuTest,),      # superclass
                       # and attrs. f=filename is required for proper scoping
                       {'runTest': lambda self, f=filename: self.RunOneTest(f),
                        'rootdir': rootdir,
-                       'pattern': pattern})
+                       'pattern': pattern,
+                       'context': context})
     setattr(module, test_class.__name__, test_class)
 
 
