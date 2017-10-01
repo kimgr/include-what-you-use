@@ -180,9 +180,14 @@ elseif( UNIX )
     pthread
     z
     ${Backtrace_LIBRARIES}
-    ${CURSES_LIBRARIES}
     ${CMAKE_DL_LIBS}
-  )
+	)
+
+  if (CURSES_FOUND)
+	target_link_libraries(include-what-you-use
+	  ${CURSES_LIBRARIES}
+	  )
+  endif (CURSES_FOUND)
 else()
   message(WARNING
     "Unknown system: ${CMAKE_SYSTEM_NAME}. "

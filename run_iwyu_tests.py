@@ -214,11 +214,28 @@ class OneIwyuTest(unittest.TestCase):
     # in the same way here.
     files_to_check = [PosixPath(f) for f in files_to_check]
 
+    runline = self.parse_runline(filename)
+
     iwyu_flags = self._iwyu_flags_map.get(filename, None)
     clang_flags = self._clang_flags_map.get(filename, [])
     clang_flags.extend(self._include_map.get(filename, []))
     iwyu_test_util.TestIwyuOnRelativeFile(self, filename, files_to_check,
                                           iwyu_flags, clang_flags, verbose=True)
+
+  def parse_runline(self, filename):
+    runline = None
+
+    with open(filename, 'r') as fh:
+      for line in fh:
+        if line.startswith('// RUN: '):
+          runline = line[8:]
+          break
+
+    if not runline:
+      return None
+
+    runline = self.expand_vars(runline)
+    return shlex.split(runline)
 
 
 def RegisterFilesForTesting(rootdir, pattern):
