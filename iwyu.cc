@@ -3544,8 +3544,15 @@ class IwyuAstConsumer
     // templates.
     ParseFunctionTemplates(context.getTranslationUnitDecl());
 
+    // Run the Clang machinery over the source file, and exit if Clang reports
+    // any errors.
     TraverseDecl(context.getTranslationUnitDecl());
-   
+
+    unsigned numClangErrors = context.getDiagnostics().getClient()->getNumErrors();
+    if (numClangErrors)
+      exit(numClangErrors);
+
+    // Now run the IWYU analysis based on the data harvested by the AST visitor.
     const set<const FileEntry*>* const files_to_report_iwyu_violations_for
         = preprocessor_info().files_to_report_iwyu_violations_for();
 
