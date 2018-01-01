@@ -3582,7 +3582,8 @@ class IwyuAstConsumer
         ->CalculateAndReportIwyuViolations();
 
     // We need to force the compile to fail so we can re-run.
-    exit(EXIT_SUCCESS_OFFSET + num_edits);
+    // exit(EXIT_SUCCESS_OFFSET + num_edits);
+    exit(0);
   }
 
   void ParseFunctionTemplates(TranslationUnitDecl* decl) {
