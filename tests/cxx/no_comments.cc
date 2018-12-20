@@ -10,6 +10,8 @@
 // Test that passing the --no_comments switch to IWYU suppresses both
 // '// lines NN-NN' and '// for symbol' comments.
 
+// IWYU-ARGS: -I. -Xiwyu --no_comments
+
 #include "tests/cxx/direct.h"
 
 // IWYU: IndirectClass is...*indirect.h
