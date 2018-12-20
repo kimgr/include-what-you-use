@@ -10,6 +10,12 @@
 // Tests --prefix_header_includes option.  All prefix_header_includes_*.cc files
 // are the same to show the difference between --prefix_header_includes values.
 
+// IWYU-ARGS: -I. -include tests/cxx/prefix_header_includes-d1.h \
+              -include tests/cxx/prefix_header_includes-d2.h \
+              -include tests/cxx/prefix_header_includes-d3.h \
+              -include tests/cxx/prefix_header_includes-d4.h \
+              -Xiwyu --prefix_header_includes=add
+
 #include "tests/cxx/direct.h"
 #include "tests/cxx/prefix_header_includes-d1.h"
 
