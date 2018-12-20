@@ -225,6 +225,7 @@ class OneIwyuTest(unittest.TestCase):
     iwyu_flags = self._iwyu_flags_map.get(filename, None)
     clang_flags = self._clang_flags_map.get(filename, [])
     clang_flags.extend(self._include_map.get(filename, []))
+    clang_flags.extend(iwyu_test_util.ParseTestArgs(filename))
     iwyu_test_util.TestIwyuOnRelativeFile(self, filename, files_to_check,
                                           iwyu_flags, clang_flags, verbose=True)
 

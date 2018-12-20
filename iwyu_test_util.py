@@ -403,6 +403,57 @@ def _CompareExpectedAndActualSummaries(expected_summaries, actual_summaries):
   return failures
 
 
+def ParseContinuedLines(prefix_pattern, string):
+  """ Parse all lines matching prefix pattern, handling \-continued lines.
+
+  prefix_pattern is a regex matching a line prefix, without captures. Anything
+  following the prefix to end-of-line will be captured and returned.
+
+  '\' is treated as a line continuation and lines are joined from the end of
+  prefix pattern up until the last line without continuation.
+
+  Returns a list of lines.
+  """
+  lines = []
+  buf = ''
+  continued = False
+
+  # Build a capture pattern from the prefix pattern and precompile.
+  pattern = '^' + prefix_pattern + '(.*)$'
+  line_re = re.compile(pattern)
+
+  for line in string.splitlines():
+    m = line_re.match(line)
+    if m:
+      buf = m.group(1)
+      continued = line.endswith('\\')
+    elif continued:
+      # Replace trailing \ with single space
+      assert buf.endswith('\\')
+      buf = buf.rstrip('\\') + ' ' + line
+      continued = line.endswith('\\')
+
+    if buf and not continued:
+      lines.append(buf)
+      buf = ''
+
+  return lines
+
+
+def ParseTestArgs(filename):
+  import shlex
+
+  with open(filename, 'r') as f:
+    content = f.read()
+
+  args = []
+  arglines = ParseContinuedLines('// IWYU-ARGS:', content)
+  for line in arglines:
+    args += shlex.split(line)
+
+  return args
+
+
 def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
                            iwyu_flags=None, clang_flags=None, verbose=False):
   """Checks running IWYU on the given .cc file.
