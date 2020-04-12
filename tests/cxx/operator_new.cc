@@ -53,7 +53,6 @@ void ExpressionsUserTypes() {
   delete[] arr;
 }
 
-#if 0
 // Aligned allocation uses operator new(size_t, std::align_val_t) under the
 // hood in C++17, but does not require <new> to be included for it. Pre-C++17,
 // the alignment is just ignored.
@@ -68,7 +67,6 @@ void ImplicitAlignedAllocation() {
   Aligned* arr = new Aligned[10];
   delete[] arr;
 }
-#endif
 
 /**** IWYU_SUMMARY
 

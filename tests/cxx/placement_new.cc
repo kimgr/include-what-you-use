@@ -96,7 +96,6 @@ void NoThrow() {
   // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   // IWYU: std::nothrow is...*<new>
-  // IWYU: operator new is...*<new>
   IndirectClass* elem = new(std::nothrow) IndirectClass;
   // IWYU: IndirectClass is...*indirect.h
   delete elem;
@@ -104,7 +103,6 @@ void NoThrow() {
   // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   // IWYU: std::nothrow is...*<new>
-  // IWYU: operator new\[\] is...*<new>
   IndirectClass* arr = new(std::nothrow) IndirectClass[4];
   // IWYU: IndirectClass is...*indirect.h
   delete[] arr;
@@ -119,7 +117,6 @@ void ExplicitAlignedAllocation() {
   // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   // IWYU: std::align_val_t is...*<new>
-  // IWYU: operator new is...*<new>
   IndirectClass* elem = new(std::align_val_t(32)) IndirectClass;
   // IWYU: IndirectClass is...*indirect.h
   delete elem;
@@ -127,7 +124,6 @@ void ExplicitAlignedAllocation() {
   // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   // IWYU: std::align_val_t is...*<new>
-  // IWYU: operator new\[\] is...*<new>
   IndirectClass* arr = new(std::align_val_t(32)) IndirectClass[10];
   // IWYU: IndirectClass is...*indirect.h
   delete[] arr;
@@ -145,7 +141,7 @@ tests/cxx/placement_new.cc should remove these lines:
 - #include "tests/cxx/placement_new-d1.h"  // lines XX-XX
 
 The full include-list for tests/cxx/placement_new.cc:
-#include <new>  // for align_val_t, nothrow, operator new, operator new[]
+#include <new>  // for align_val_t, nothrow, operator new
 #include "tests/cxx/indirect.h"  // for IndirectClass
 #include "tests/cxx/placement_new-i1.h"  // for ClassTemplate
 
