@@ -363,7 +363,7 @@ def execute(invocations, verbose, formatter, jobs, max_load_average=0):
         for invocation in invocations:
             proc = invocation.start(verbose)
             print(formatter(proc.get_output()))
-            if proc.returncode != 2:
+            if proc.returncode:
                 exit_code = 1
         return exit_code
 
@@ -374,7 +374,7 @@ def execute(invocations, verbose, formatter, jobs, max_load_average=0):
         for proc in complete:
             pending.remove(proc)
             print(formatter(proc.get_output()))
-            if proc.returncode != 2:
+            if proc.returncode:
                 exit_code = 1
 
         # Schedule new processes if there's room.

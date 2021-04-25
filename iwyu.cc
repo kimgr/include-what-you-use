@@ -3655,14 +3655,8 @@ class IwyuAstConsumer
 
     // Check if any unrecoverable errors have occurred.
     // There is no point in continuing when the AST is in a bad state.
-    //
-    // EXIT_INVALIDARGS is not a great choice for the return status
-    // because a compile error will not have a strong connection to the
-    // command line arguments, but there are only 2 error codes and
-    // this is the least bad choice.
-    // TODO : Readdress when error codes are reworked.
     if (compiler()->getDiagnostics().hasUnrecoverableErrorOccurred())
-      exit(EXIT_INVALIDARGS);
+      exit(EXIT_FAILURE);
 
     const set<const FileEntry*>* const files_to_report_iwyu_violations_for
         = preprocessor_info().files_to_report_iwyu_violations_for();
@@ -3693,7 +3687,7 @@ class IwyuAstConsumer
         ->CalculateAndReportIwyuViolations();
 
     // We need to force the compile to fail so we can re-run.
-    exit(EXIT_SUCCESS_OFFSET + num_edits);
+    exit(EXIT_FAILURE);
   }
 
   void ParseFunctionTemplates(TranslationUnitDecl* decl) {
