@@ -3686,8 +3686,17 @@ class IwyuAstConsumer
     num_edits += preprocessor_info().FileInfoFor(main_file)
         ->CalculateAndReportIwyuViolations();
 
-    // We need to force the compile to fail so we can re-run.
-    exit(EXIT_FAILURE);
+    if (GlobalFlags().fail) {
+      // We need to force the compile to fail so we can re-run.
+      exit(EXIT_FAILURE);
+    }
+
+    if (num_edits > 0) {
+      // IWYU suggested changes.
+      exit(EXIT_FAILURE);
+    }
+
+    exit(EXIT_SUCCESS);
   }
 
   void ParseFunctionTemplates(TranslationUnitDecl* decl) {

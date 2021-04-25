@@ -92,6 +92,7 @@ struct CommandlineFlags {
   bool no_fwd_decls;  // Disable forward declarations.
   bool quoted_includes_first; // Place quoted includes first in sort order.
   bool cxx17ns; // -C: C++17 nested namespace syntax
+  bool fail; // -F: Always return failure exit code (for use with make -k)
 };
 
 const CommandlineFlags& GlobalFlags();

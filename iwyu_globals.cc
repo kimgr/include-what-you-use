@@ -96,6 +96,7 @@ static void PrintHelp(const char* extra_msg) {
          "   --quoted_includes_first: when sorting includes, place quoted\n"
          "        ones first.\n"
          "   --cxx17ns: suggests the more concise syntax introduced in C++17\n"
+         "   --fail: Always return failure exit code (for use with make -k)\n"
          "\n"
          "In addition to IWYU-specific options you can specify the following\n"
          "options without -Xiwyu prefix:\n"
@@ -185,6 +186,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"no_fwd_decls", no_argument, nullptr, 'f'},
     {"quoted_includes_first", no_argument, nullptr, 'q' },
     {"cxx17ns", no_argument, nullptr, 'C'},
+    {"fail", no_argument, nullptr, 'F'},
     {nullptr, 0, nullptr, 0}
   };
   static const char shortopts[] = "v:c:m:n";
@@ -217,6 +219,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
         break;
       case 'q': quoted_includes_first = true; break;
       case 'C': cxx17ns = true; break;
+      case 'F': fail = true; break;
       case -1: return optind;   // means 'no more input'
       default:
         PrintHelp("FATAL ERROR: unknown flag.");
