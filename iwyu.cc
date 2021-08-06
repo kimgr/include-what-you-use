@@ -1788,7 +1788,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
            !IsClassType(return_type));
     if (is_responsible_for_return_type &&
         !type_use_reported_in_visit_function_type) {
-      ReportTypeUse(GetLocation(decl), return_type, "(for fn return type)");
+      ReportTypeUse(GetLocation(decl), return_type);
     }
 
     // ...and non-explicit, one-arg ('autocast') constructor types.
@@ -1818,8 +1818,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // full type for other reasons; that's just double-reporting.
         if (current_ast_node()->in_forward_declare_context() ||
             IsPointerOrReferenceAsWritten(param_type)) {
-          ReportTypeUse(GetLocation(&param_tl), deref_param_type,
-                        "(for autocast)");
+          ReportTypeUse(GetLocation(&param_tl), deref_param_type);
         }
       } else {
         VERRS(6) << "WARNING: nullptr TypeSourceInfo for "
