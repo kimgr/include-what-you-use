@@ -326,6 +326,22 @@ class ASTNode {
 
 // --- Helper classes for ASTNode.
 
+// A scope-bound forward-declare-context setter/resetter.
+struct ScopedForwardDeclareContext {
+  ScopedForwardDeclareContext(ASTNode* node, bool can_fwd_decl)
+      : node_(node), oldval_(node->in_forward_declare_context()) {
+    node_->set_in_forward_declare_context(can_fwd_decl);
+  }
+
+  ~ScopedForwardDeclareContext() {
+    node_->set_in_forward_declare_context(oldval_);
+  }
+
+ private:
+  ASTNode* node_;
+  bool oldval_;
+};
+
 // An object of this type modifies a given variable in the constructor
 // and restores its original value in the destructor.
 template<typename T> class ValueSaver {

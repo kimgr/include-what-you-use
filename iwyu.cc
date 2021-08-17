@@ -1732,6 +1732,15 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return Base::VisitTypedefNameDecl(decl);
   }
 
+  bool TraverseFuncExceptionSpecHelper(llvm::ArrayRef<QualType> exceptions) {
+    // Exception specs are never forward-declarable.
+    ScopedForwardDeclareContext fwd_decl_ctx(current_ast_node(), false);
+    for (const QualType& exception_type : exceptions) {
+      TRY_TO(TraverseType(exception_type));
+    }
+    return true;
+  }
+
   bool TraverseFunctionProtoTypeLoc(FunctionProtoTypeLoc typeloc) {
     // Implement preorder traversal.
     if (!this->getDerived().shouldTraversePostOrder()) {
@@ -1754,9 +1763,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       }
     }
 
-    for (const QualType& exception_type : prototype->exceptions()) {
-      TRY_TO(TraverseType(exception_type));
-    }
+    TRY_TO(TraverseFuncExceptionSpecHelper(prototype->exceptions()));
 
     if (Expr* expr = prototype->getNoexceptExpr())
       TRY_TO(TraverseStmt(expr));
@@ -2481,34 +2488,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   //------------------------------------------------------------
   // Visitors of types derived from clang::Type.
-
-  bool VisitType(clang::Type* type) {
-    // In VisitFunctionDecl(), we say all children of function
-    // declarations are forward-declarable.  This is true, *except*
-    // for the exception (throw) types.  We clean that up here.
-    // TODO(csilvers): figure out how to do these two steps in one place.
-    const FunctionProtoType* fn_type = nullptr;
-    if (!fn_type) {
-      fn_type = current_ast_node()->template GetParentAs<FunctionProtoType>();
-    }
-    if (!fn_type) {
-      if (const FunctionDecl* fn_decl
-          = current_ast_node()->template GetParentAs<FunctionDecl>())
-        fn_type = dyn_cast<FunctionProtoType>(GetTypeOf(fn_decl));
-    }
-    if (fn_type) {
-      for (FunctionProtoType::exception_iterator it =
-               fn_type->exception_begin();
-           it != fn_type->exception_end(); ++it)
-        if (it->getTypePtr() == type) {  // *we're* an exception decl
-          current_ast_node()->set_in_forward_declare_context(false);
-          break;
-        }
-    }
-
-    return Base::VisitType(type);
-  }
-
   bool VisitTemplateSpecializationType(TemplateSpecializationType* type) {
     if (CanIgnoreCurrentASTNode() || CanIgnoreType(type))
       return true;
