@@ -247,6 +247,13 @@ bool CanIgnoreLocation(SourceLocation loc) {
 
 }  // anonymous namespace
 
+// Adapted from clang/AST/RecursiveASTVisitor.h.
+#define TRY_TO(CALL_EXPR)                                                      \
+  do {                                                                         \
+    if (!this->getDerived().CALL_EXPR)                                         \
+      return false;                                                            \
+  } while (false)
+
 // ----------------------------------------------------------------------
 // --- BaseAstVisitor
 // ----------------------------------------------------------------------
@@ -374,8 +381,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return true;
     ASTNode node(nns);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
-    if (!this->getDerived().VisitNestedNameSpecifier(nns))
-      return false;
+    TRY_TO(VisitNestedNameSpecifier(nns));
     return Base::TraverseNestedNameSpecifier(nns);
   }
 
@@ -385,33 +391,28 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     ASTNode node(&nns_loc);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
     // TODO(csilvers): have VisitNestedNameSpecifierLoc instead.
-    if (!this->getDerived().VisitNestedNameSpecifier(
-            nns_loc.getNestedNameSpecifier()))
-      return false;
+    TRY_TO(VisitNestedNameSpecifier(nns_loc.getNestedNameSpecifier()));
     return Base::TraverseNestedNameSpecifierLoc(nns_loc);
   }
 
   bool TraverseTemplateName(TemplateName template_name) {
     ASTNode node(&template_name);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
-    if (!this->getDerived().VisitTemplateName(template_name))
-      return false;
+    TRY_TO(VisitTemplateName(template_name));
     return Base::TraverseTemplateName(template_name);
   }
 
   bool TraverseTemplateArgument(const TemplateArgument& arg) {
     ASTNode node(&arg);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
-    if (!this->getDerived().VisitTemplateArgument(arg))
-      return false;
+    TRY_TO(VisitTemplateArgument(arg));
     return Base::TraverseTemplateArgument(arg);
   }
 
   bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc& argloc) {
     ASTNode node(&argloc);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
-    if (!this->getDerived().VisitTemplateArgumentLoc(argloc))
-      return false;
+    TRY_TO(VisitTemplateArgumentLoc(argloc));
     return Base::TraverseTemplateArgumentLoc(argloc);
   }
 
@@ -561,9 +562,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       if (const CXXRecordDecl* cxx_field_decl = DynCastFrom(member_decl)) {
         if (const CXXDestructorDecl* field_dtor
             = cxx_field_decl->getDestructor()) {
-          if (!this->getDerived().TraverseImplicitDestructorCall(
-                  const_cast<CXXDestructorDecl*>(field_dtor), type))
-            return false;
+          TRY_TO(TraverseImplicitDestructorCall(
+              const_cast<CXXDestructorDecl*>(field_dtor), type));
         }
       }
     }
@@ -643,25 +643,25 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       errs() << AnnotatedName("Destruction")
              << PrintableType(type_being_destroyed) << "\n";
     }
-    return this->getDerived().HandleFunctionCall(decl, type_being_destroyed,
-                                                 static_cast<Expr*>(nullptr));
+    TRY_TO(HandleFunctionCall(decl, type_being_destroyed, nullptr));
+    return true;
   }
 
 
   bool TraverseCallExpr(clang::CallExpr* expr) {
     if (!Base::TraverseCallExpr(expr))  return false;
     if (CanIgnoreCurrentASTNode())  return true;
-    return this->getDerived().HandleFunctionCall(expr->getDirectCallee(),
-                                                 TypeOfParentIfMethod(expr),
-                                                 expr);
+    TRY_TO(HandleFunctionCall(expr->getDirectCallee(),
+                              TypeOfParentIfMethod(expr), expr));
+    return true;
   }
 
   bool TraverseCXXMemberCallExpr(clang::CXXMemberCallExpr* expr) {
     if (!Base::TraverseCXXMemberCallExpr(expr))  return false;
     if (CanIgnoreCurrentASTNode())  return true;
-    return this->getDerived().HandleFunctionCall(expr->getDirectCallee(),
-                                                 TypeOfParentIfMethod(expr),
-                                                 expr);
+    TRY_TO(HandleFunctionCall(expr->getDirectCallee(),
+                              TypeOfParentIfMethod(expr), expr));
+    return true;
   }
 
   bool TraverseCXXOperatorCallExpr(clang::CXXOperatorCallExpr* expr) {
@@ -677,18 +677,15 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       if (const Expr* first_argument = GetFirstClassArgument(expr))
         parent_type = GetTypeOf(first_argument);
     }
-    return this->getDerived().HandleFunctionCall(expr->getDirectCallee(),
-                                                 parent_type, expr);
+    TRY_TO(HandleFunctionCall(expr->getDirectCallee(), parent_type, expr));
+    return true;
   }
 
   bool TraverseCXXConstructExpr(clang::CXXConstructExpr* expr) {
     if (!Base::TraverseCXXConstructExpr(expr))  return false;
     if (CanIgnoreCurrentASTNode())  return true;
 
-    if (!this->getDerived().HandleFunctionCall(expr->getConstructor(),
-                                               GetTypeOf(expr),
-                                               expr))
-      return false;
+    TRY_TO(HandleFunctionCall(expr->getConstructor(), GetTypeOf(expr), expr));
 
     // When creating a local variable or a temporary, but not a pointer, the
     // constructor is also responsible for destruction (which happens
@@ -700,9 +697,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
         !IsCXXConstructExprInNewExpr(current_ast_node());
     if (will_call_implicit_destructor_on_leaving_scope) {
       if (const CXXDestructorDecl* dtor_decl = GetSiblingDestructorFor(expr)) {
-        if (!this->getDerived().TraverseImplicitDestructorCall(
-                const_cast<CXXDestructorDecl*>(dtor_decl), GetTypeOf(expr)))
-          return false;
+        TRY_TO(TraverseImplicitDestructorCall(
+            const_cast<CXXDestructorDecl*>(dtor_decl), GetTypeOf(expr)));
       }
     }
     return true;
@@ -717,8 +713,9 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     CXXDestructorDecl* dtor_decl =
         const_cast<CXXDestructorDecl*>(GetSiblingDestructorFor(expr));
     const Type* type = GetTypeOf(expr);
-    return (this->getDerived().HandleFunctionCall(ctor_decl, type, expr) &&
-            this->getDerived().HandleFunctionCall(dtor_decl, type, expr));
+    TRY_TO(HandleFunctionCall(ctor_decl, type, expr));
+    TRY_TO(HandleFunctionCall(dtor_decl, type, expr));
+    return true;
   }
 
   bool TraverseCXXNewExpr(clang::CXXNewExpr* expr) {
@@ -733,8 +730,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       const Type* op_parent = nullptr;
       if (isa<CXXMethodDecl>(operator_new))
         op_parent = parent_type;
-      if (!this->getDerived().HandleFunctionCall(operator_new, op_parent, expr))
-        return false;
+      TRY_TO(HandleFunctionCall(operator_new, op_parent, expr));
     }
     return true;
   }
@@ -752,13 +748,12 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       const Type* op_parent = nullptr;
       if (isa<CXXMethodDecl>(operator_delete))
         op_parent = parent_type;
-      if (!this->getDerived().HandleFunctionCall(operator_delete, op_parent,
-                                                 expr))
-        return false;
+      TRY_TO(HandleFunctionCall(operator_delete, op_parent, expr));
     }
     const CXXDestructorDecl* dtor = GetDestructorForDeleteExpr(expr);
-    return this->getDerived().HandleFunctionCall(
-        const_cast<CXXDestructorDecl*>(dtor), parent_type, expr);
+    TRY_TO(HandleFunctionCall(
+             const_cast<CXXDestructorDecl*>(dtor), parent_type, expr));
+    return true;
   }
 
   // This is to catch function pointers to templates.
@@ -774,8 +769,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       const Type* parent_type = nullptr;
       if (expr->getQualifier() && expr->getQualifier()->getAsType())
         parent_type = expr->getQualifier()->getAsType();
-      if (!this->getDerived().HandleFunctionCall(fn_decl, parent_type, expr))
-        return false;
+      TRY_TO(HandleFunctionCall(fn_decl, parent_type, expr));
     }
     return true;
   }
@@ -3972,9 +3966,7 @@ class IwyuAstConsumer
         } else {
           continue;    // not a method or static method
         }
-        if (!this->getDerived().HandleFunctionCall(
-                fn_decl, underlying_type, static_cast<Expr*>(nullptr)))
-          return false;
+        TRY_TO(HandleFunctionCall(fn_decl, underlying_type, nullptr));
       }
     }
     // We don't have to simulate a user instantiating the type, because
@@ -4203,6 +4195,8 @@ class IwyuAction : public ASTFrontendAction {
 };
 
 } // namespace include_what_you_use
+
+#undef TRY_TO
 
 #include "iwyu_driver.h"
 #include "clang/Frontend/FrontendAction.h"
