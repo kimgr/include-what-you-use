@@ -175,6 +175,7 @@ using clang::FriendDecl;
 using clang::FriendTemplateDecl;
 using clang::FunctionDecl;
 using clang::FunctionProtoType;
+using clang::FunctionProtoTypeLoc;
 using clang::FunctionTemplateDecl;
 using clang::FunctionType;
 using clang::LValueReferenceType;
@@ -1729,6 +1730,46 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     }
 
     return Base::VisitTypedefNameDecl(decl);
+  }
+
+  bool TraverseFunctionProtoTypeLoc(FunctionProtoTypeLoc typeloc) {
+    // Implement preorder traversal.
+    if (!this->getDerived().shouldTraversePostOrder()) {
+      TRY_TO(WalkUpFromFunctionProtoTypeLoc(typeloc));
+      if (this->getDerived().shouldWalkTypesOfTypeLocs())
+        TRY_TO(WalkUpFromFunctionProtoType(
+            const_cast<FunctionProtoType*>(typeloc.getTypePtr())));
+    }
+
+    // Traverse the function prototype components.
+    TRY_TO(TraverseTypeLoc(typeloc.getReturnLoc()));
+
+    const FunctionProtoType* prototype = typeloc.getTypePtr();
+
+    for (unsigned i = 0; i < typeloc.getNumParams(); ++i) {
+      if (typeloc.getParam(i)) {
+        TRY_TO(TraverseDecl(typeloc.getParam(i)));
+      } else if (i < prototype->getNumParams()) {
+        TRY_TO(TraverseType(prototype->getParamType(i)));
+      }
+    }
+
+    for (const QualType& exception_type : prototype->exceptions()) {
+      TRY_TO(TraverseType(exception_type));
+    }
+
+    if (Expr* expr = prototype->getNoexceptExpr())
+      TRY_TO(TraverseStmt(expr));
+
+    // Implement postorder traversal.
+    if (this->getDerived().shouldTraversePostOrder()) {
+      TRY_TO(WalkUpFromFunctionProtoTypeLoc(typeloc));
+      if (this->getDerived().shouldWalkTypesOfTypeLocs())
+        TRY_TO(WalkUpFromFunctionProtoType(
+            const_cast<FunctionProtoType*>(typeloc.getTypePtr())));
+    }
+
+    return true;
   }
 
   // If we're a declared (not defined) function, all our types --
