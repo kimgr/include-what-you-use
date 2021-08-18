@@ -18,7 +18,6 @@
 // --- Return values of functions.
 
 // Requires the full type because it does not obey rule (1)
-// IWYU: IndirectStruct1 needs a declaration
 // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h
 IndirectStruct1 DoesNotForwardDeclareFn();
 
@@ -39,17 +38,11 @@ IndirectStruct2 DoesEverythingRightFn();
 
 // --- Now do it all again, with templates!
 
-// IWYU: TplIndirectStruct1 needs a declaration
 // IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h
 TplIndirectStruct1<int> TplDoesNotForwardDeclareFn();
 
-// A bit of an asymmetry with the non-tpl case: 'struct
-// IndirectStructForwardDeclaredInD1' does not need to be
-// forward-declared because it's elaborated, but template types need
-// to be forward-declared even when they're elaborated.
-// IWYU: TplIndirectStructForwardDeclaredInD1 needs a declaration
-struct TplIndirectStructForwardDeclaredInD1<int>
 // IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h
+struct TplIndirectStructForwardDeclaredInD1<int>
 TplDoesNotForwardDeclareProperlyFn();
 
 template <typename T> struct TplDirectStruct1;

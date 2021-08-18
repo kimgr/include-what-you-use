@@ -1732,6 +1732,22 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return Base::VisitTypedefNameDecl(decl);
   }
 
+  bool TraverseFuncReturnTypeHelper(TypeLoc typeloc, const FunctionDecl* decl) {
+    const Type* return_type = RemoveElaboration(typeloc.getTypePtr());
+    if (CanIgnoreType(return_type))
+      return true;
+
+    bool can_fwd_decl =
+        !decl->isThisDeclarationADefinition() &&
+        (IsFriendDecl(decl) || IsPointerOrReferenceAsWritten(return_type) ||
+         CodeAuthorWantsJustAForwardDeclare(return_type,
+                                            GetLocation(&typeloc)));
+
+    ScopedForwardDeclareContext fwd_decl_ctx(current_ast_node(), can_fwd_decl);
+    TRY_TO(TraverseTypeLoc(typeloc));
+    return true;
+  }
+
   bool TraverseFuncExceptionSpecHelper(llvm::ArrayRef<QualType> exceptions) {
     // Exception specs are never forward-declarable.
     ScopedForwardDeclareContext fwd_decl_ctx(current_ast_node(), false);
@@ -1742,6 +1758,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   bool TraverseFunctionProtoTypeLoc(FunctionProtoTypeLoc typeloc) {
+    const FunctionDecl* decl = current_ast_node()->template GetParentAs<FunctionDecl>();
+    if (!decl) {
+      // Default traversal if we're not part of a FunctionDecl.
+      return Base::TraverseFunctionProtoTypeLoc(typeloc);
+    }
+
     // Implement preorder traversal.
     if (!this->getDerived().shouldTraversePostOrder()) {
       TRY_TO(WalkUpFromFunctionProtoTypeLoc(typeloc));
@@ -1751,7 +1773,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     }
 
     // Traverse the function prototype components.
-    TRY_TO(TraverseTypeLoc(typeloc.getReturnLoc()));
+    TRY_TO(TraverseFuncReturnTypeHelper(typeloc.getReturnLoc(), decl));
 
     const FunctionProtoType* prototype = typeloc.getTypePtr();
 
@@ -1814,24 +1836,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // never need full types for them.)
     if (IsFriendDecl(decl))
       return true;
-
-    // ...except the return value.
-    const Type* return_type
-        = RemoveElaboration(decl->getReturnType().getTypePtr());
-    const bool is_responsible_for_return_type
-        = (!CanIgnoreType(return_type) &&
-           !IsPointerOrReferenceAsWritten(return_type) &&
-           !CodeAuthorWantsJustAForwardDeclare(return_type, GetLocation(decl)));
-    // Don't bother to report here, when the language agrees with us
-    // we need the full type; that will be reported elsewhere, so
-    // reporting here would be double-counting.
-    const bool type_use_reported_in_visit_function_type
-        = (!current_ast_node()->in_forward_declare_context() ||
-           !IsClassType(return_type));
-    if (is_responsible_for_return_type &&
-        !type_use_reported_in_visit_function_type) {
-      ReportTypeUse(GetLocation(decl), return_type);
-    }
 
     // ...and non-explicit, one-arg ('autocast') constructor types.
     for (FunctionDecl::param_iterator param = decl->param_begin();
