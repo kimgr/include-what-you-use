@@ -170,7 +170,6 @@ using clang::Decl;
 using clang::DeclContext;
 using clang::DeclRefExpr;
 using clang::DeducedTemplateSpecializationType;
-using clang::ElaboratedType;
 using clang::EnumConstantDecl;
 using clang::EnumDecl;
 using clang::EnumType;
@@ -2611,7 +2610,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         }
 
         parent_type = GetTypeOf(decl);
-      } else if (ast_node->IsA<ElaboratedType>()) {
+      } else if (IsElaborationNode(ast_node)) {
         // If it's not a ValueDecl, it must be a type decl. Elaborated types in
         // type decls are forward-declarable.
         return true;
