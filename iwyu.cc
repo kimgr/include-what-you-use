@@ -2899,7 +2899,7 @@ class InstantiatedTemplateVisitor
     if (const ReferenceType* reftype = DynCastFrom(arg_type)) {
       arg_type = reftype->getPointeeTypeAsWritten().getTypePtr();
     }
-    if (const TemplateSpecializationType* type = DynCastFrom(arg_type)) {
+    if (const auto* type = arg_type->getAs<TemplateSpecializationType>()) {
       // Even though sizeof(MyClass<T>) only requires knowing how much
       // storage MyClass<T> takes, the language seems to require that
       // MyClass<T> be fully instantiated, even typedefs.  (Try
@@ -4003,7 +4003,7 @@ class IwyuAstConsumer
       arg_type = reftype->getPointeeTypeAsWritten().getTypePtr();
     }
 
-    if (const TemplateSpecializationType* arg_tmpl = DynCastFrom(arg_type)) {
+    if (const auto* arg_tmpl = arg_type->getAs<TemplateSpecializationType>()) {
       // Special case: We are instantiating the type in the context of an
       // expression. Need to push the type to the AST stack explicitly.
       ASTNode node(arg_tmpl);
