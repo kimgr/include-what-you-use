@@ -2562,8 +2562,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // this the canonical place to figure out if we can forward-declare.
   bool CanForwardDeclareType(const ASTNode* ast_node) const {
     CHECK_(ast_node->IsA<Type>());
-    if (const auto* enum_type = ast_node->GetAs<EnumType>())
-      return CanBeOpaqueDeclared(enum_type);
+    if (const auto* type = ast_node->GetAs<Type>()) {
+      if (const auto* enum_type = type->getAs<EnumType>()) {
+        return CanBeOpaqueDeclared(enum_type);
+      }
+    }
     // If we're in a forward-declare context, well then, there you have it.
     if (ast_node->in_forward_declare_context())
       return true;
@@ -2986,7 +2989,7 @@ class InstantiatedTemplateVisitor
       return true;
     }
 
-    if (const auto* enum_type = dyn_cast<EnumType>(type))
+    if (const auto* enum_type = type->getAs<EnumType>())
       return !CanBeOpaqueDeclared(enum_type);
 
     // If we're inside a typedef, we don't need our full type info --
