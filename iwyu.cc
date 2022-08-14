@@ -2822,7 +2822,8 @@ class InstantiatedTemplateVisitor
     // Among all subst-type params, we only want those in the resugar-map. If
     // we're not in the resugar-map at all, we're not a type corresponding to
     // the template being instantiated, so we can be ignored.
-    type = type->getUnqualifiedDesugaredType();
+    type = RemoveSubstTemplateTypeParm(type);
+    type = RemoveElaboration(type);
     return ContainsKey(resugar_map_, type);
   }
 
