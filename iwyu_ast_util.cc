@@ -428,7 +428,9 @@ string PrintableType(const Type* type) {
   if (!type)
     return "<null type>";
 
-  return QualType(type, 0).getAsString();
+  string type_class = type->getTypeClassName();
+  string type_name = QualType(type, 0).getAsString();
+  return type_class + ":" + type_name;
 }
 
 string PrintableTypeLoc(const TypeLoc& typeloc) {
