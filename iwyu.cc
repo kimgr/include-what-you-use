@@ -2823,6 +2823,7 @@ class InstantiatedTemplateVisitor
     // we're not in the resugar-map at all, we're not a type corresponding to
     // the template being instantiated, so we can be ignored.
     type = RemoveSubstTemplateTypeParm(type);
+    type = RemoveElaboration(type);
     return ContainsKey(resugar_map_, type);
   }
 
