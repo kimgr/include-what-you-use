@@ -1144,11 +1144,9 @@ const Type* DesugarImplicit(const Type* type) {
 }
 
 const Type* RemoveElaboration(const Type* type) {
-  VERRS(1) << __func__ << ": before: " << PrintableType(type) << "\n";
   if (const ElaboratedType* elaborated_type = DynCastFrom(type))
     type = elaborated_type->getNamedType().getTypePtr();
 
-  VERRS(1) << __func__ << ": after: " << PrintableType(type) << "\n";
   return type;
 }
 
@@ -1162,10 +1160,8 @@ bool IsClassType(const clang::Type* type) {
 }
 
 const Type* RemoveSubstTemplateTypeParm(const Type* type) {
-  VERRS(1) << __func__ << ": before: " << PrintableType(type) << "\n";
   if (const SubstTemplateTypeParmType* subst_type = DynCastFrom(type))
     type = subst_type->getReplacementType().getTypePtr();
-  VERRS(1) << __func__ << ": after: " << PrintableType(type) << "\n";
   return type;
 }
 
