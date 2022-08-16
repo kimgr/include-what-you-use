@@ -1115,6 +1115,34 @@ const Type* GetCanonicalType(const Type* type) {
   return canonical_type.getTypePtr();
 }
 
+const Type* DesugarImplicit(const Type* type) {
+  VERRS(1) << __func__ << ": before: " << PrintableType(type) << "\n";
+  const Type *cur = type;
+
+  while (true) {
+    // Don't desugar types that (potentially) add a name.
+    if (cur->getTypeClass() == Type::Typedef ||
+        cur->getTypeClass() == Type::Using ||
+        cur->getTypeClass() == Type::TemplateSpecialization) {
+      return cur;
+    }
+
+    switch (cur->getTypeClass()) {
+#define ABSTRACT_TYPE(Class, Parent)
+#define TYPE(Class, Parent)                                \
+    case Type::Class: {                                    \
+      const auto* derived = cast<clang::Class##Type>(cur); \
+      if (!derived->isSugared()) {                         \
+        return cur;                                        \
+      } \
+      cur = derived->desugar().getTypePtr();               \
+      break;                                               \
+  }
+#include "clang/AST/TypeNodes.inc"
+    }
+  }
+}
+
 const Type* RemoveElaboration(const Type* type) {
   VERRS(1) << __func__ << ": before: " << PrintableType(type) << "\n";
   if (const ElaboratedType* elaborated_type = DynCastFrom(type))
@@ -1199,13 +1227,11 @@ const Type* RemovePointersAndReferences(const Type* type) {
 }
 
 static const NamedDecl* TypeToDeclImpl(const Type* type, bool as_written) {
-  // Get past all the 'class' and 'struct' prefixes, and namespaces.
-  type = RemoveElaboration(type);
-
   // Read past SubstTemplateTypeParmType (this can happen if a
   // template function returns the tpl-arg type: e.g. for
   // 'T MyFn<T>() {...}; MyFn<X>.a', the type of MyFn<X> will be a Subst.
-  type = RemoveSubstTemplateTypeParm(type);
+  // Get past all the 'class' and 'struct' prefixes, and namespaces.
+  type = DesugarImplicit(type);
 
   CHECK_(!isa<ObjCObjectType>(type) && "IWYU doesn't support Objective-C");
 

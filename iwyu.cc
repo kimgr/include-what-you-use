@@ -2822,8 +2822,7 @@ class InstantiatedTemplateVisitor
     // Among all subst-type params, we only want those in the resugar-map. If
     // we're not in the resugar-map at all, we're not a type corresponding to
     // the template being instantiated, so we can be ignored.
-    type = RemoveSubstTemplateTypeParm(type);
-    type = RemoveElaboration(type);
+    type = DesugarImplicit(type);
     return ContainsKey(resugar_map_, type);
   }
 
@@ -3237,8 +3236,7 @@ class InstantiatedTemplateVisitor
     return GetLocOfTemplateThatProvides(decl).isValid();
   }
   bool IsProvidedByTemplate(const Type* type) const {
-    type = RemoveSubstTemplateTypeParm(type);
-    type = RemovePointersAndReferences(type);  // get down to the decl
+    type = DesugarImplicit(type);
     if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
       decl = GetDefinitionAsWritten(decl);
       return GetLocOfTemplateThatProvides(decl).isValid();
