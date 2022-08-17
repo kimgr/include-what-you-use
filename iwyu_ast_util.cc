@@ -1116,7 +1116,6 @@ const Type* GetCanonicalType(const Type* type) {
 }
 
 const Type* DesugarImplicit(const Type* type) {
-  VERRS(1) << __func__ << ": before: " << PrintableType(type) << "\n";
   const Type *cur = type;
 
   while (true) {
