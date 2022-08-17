@@ -1185,7 +1185,7 @@ bool InvolvesTypeForWhich(const Type* type,
 }
 
 bool IsPointerOrReferenceAsWritten(const Type* type) {
-  type = RemoveElaboration(type);
+  type = DesugarImplicit(type);
   return isa<PointerType>(type) || isa<LValueReferenceType>(type);
 }
 
