@@ -1199,13 +1199,10 @@ const Type* RemovePointersAndReferencesAsWritten(const Type* type) {
 }
 
 const Type* RemovePointerFromType(const Type* type) {
-  if (!IsPointerOrReferenceAsWritten(type)) {   // ah well, have to desugar
-    type = type->getUnqualifiedDesugaredType();
-  }
+  type = DesugarImplicit(type);
   if (!IsPointerOrReferenceAsWritten(type)) {
     return nullptr;
   }
-  type = RemoveElaboration(type);
   type = type->getPointeeType().getTypePtr();
   return type;
 }
