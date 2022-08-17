@@ -3236,7 +3236,6 @@ class InstantiatedTemplateVisitor
     return GetLocOfTemplateThatProvides(decl).isValid();
   }
   bool IsProvidedByTemplate(const Type* type) const {
-    type = DesugarImplicit(type);
     if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
       decl = GetDefinitionAsWritten(decl);
       return GetLocOfTemplateThatProvides(decl).isValid();
