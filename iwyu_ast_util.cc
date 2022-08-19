@@ -1200,6 +1200,19 @@ const Type* RemovePointersAndReferencesAsWritten(const Type* type) {
   return type;
 }
 
+static bool IsSugared(const Type* type) {
+  switch (type->getTypeClass()) {
+#define ABSTRACT_TYPE(Class, Parent)
+#define TYPE(Class, Parent)                             \
+  case Type::Class: {                                   \
+    return cast<clang::Class##Type>(type)->isSugared(); \
+  }
+#include "clang/AST/TypeNodes.inc"
+  }
+
+  return false;
+}
+
 const Type* RemovePointerFromType(const Type* type) {
   type = DesugarImplicit(type);
   if (!IsPointerOrReferenceAsWritten(type)) {
