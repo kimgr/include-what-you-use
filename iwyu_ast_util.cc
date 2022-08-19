@@ -1303,7 +1303,7 @@ bool HasImplicitConversionConstructor(const Type* type) {
 map<const clang::Type*, const clang::Type*>
 GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
   map<const Type*, const Type*> retval;
-  type = RemoveElaboration(type);  // get rid of the class keyword
+  type = DesugarImplicit(type);  // get rid of the class keyword
   const TemplateSpecializationType* tpl_spec_type = DynCastFrom(type);
   if (!tpl_spec_type)
     return retval;
