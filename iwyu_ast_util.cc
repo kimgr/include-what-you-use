@@ -1154,9 +1154,11 @@ bool IsTemplatizedType(const Type* type) {
 }
 
 bool IsClassType(const clang::Type* type) {
-  return (type && (isa<TemplateSpecializationType>(DesugarImplicit(type)) ||
-                   // xxx: This fails with DesugarImplicit
-                   isa<RecordType>(RemoveElaboration(type))));
+  if (!type)
+    return false;
+
+  type = DesugarImplicit(type);
+  return (isa<TemplateSpecializationType>(type) || isa<RecordType>(type));
 }
 
 const Type* RemoveSubstTemplateTypeParm(const Type* type) {
