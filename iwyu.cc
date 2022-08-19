@@ -3995,7 +3995,7 @@ class IwyuAstConsumer
     if (CanIgnoreCurrentASTNode())  return true;
 
     const Type* arg_type =
-        RemoveElaboration(expr->getTypeOfArgument().getTypePtr());
+        DesugarImplicit(expr->getTypeOfArgument().getTypePtr());
     // Calling sizeof on a reference-to-X is the same as calling it on X.
     if (const ReferenceType* reftype = DynCastFrom(arg_type)) {
       arg_type = reftype->getPointeeTypeAsWritten().getTypePtr();
