@@ -3249,7 +3249,7 @@ class InstantiatedTemplateVisitor
   // class was instantiated) or not.  We store this in resugar_map by
   // having the value be nullptr.
   bool IsDefaultTemplateParameter(const Type* type) const {
-    type = RemoveSubstTemplateTypeParm(type);
+    type = DesugarImplicit(type);
     return ContainsKeyValue(resugar_map_, type, static_cast<Type*>(nullptr));
   }
 
