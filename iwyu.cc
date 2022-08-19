@@ -1503,8 +1503,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   set<const Type*> GetCallerResponsibleTypesForFnReturn(
       const FunctionDecl* decl) {
     set<const Type*> retval;
-    const Type* return_type
-        = RemoveElaboration(decl->getReturnType().getTypePtr());
+    const Type* return_type =
+        DesugarImplicit(decl->getReturnType().getTypePtr());
     if (CodeAuthorWantsJustAForwardDeclare(return_type, GetLocation(decl))) {
       retval.insert(return_type);
       // TODO(csilvers): include template type-args if appropriate.
