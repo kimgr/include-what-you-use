@@ -1783,6 +1783,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
 
     // ...except the return value.
+    // xxx: Can't use DesugarImplicit
     const Type* return_type
         = RemoveElaboration(decl->getReturnType().getTypePtr());
     const bool is_responsible_for_return_type
