@@ -1150,7 +1150,7 @@ const Type* RemoveElaboration(const Type* type) {
 }
 
 bool IsTemplatizedType(const Type* type) {
-  return (type && isa<TemplateSpecializationType>(RemoveElaboration(type)));
+  return (type && isa<TemplateSpecializationType>(DesugarImplicit(type)));
 }
 
 bool IsClassType(const clang::Type* type) {
