@@ -3258,6 +3258,7 @@ class InstantiatedTemplateVisitor
   // If we're not in the resugar-map, then we weren't canonicalized,
   // so we can just use the input type unchanged.
   const Type* ResugarType(const Type* type) const {
+    // xxx: Cannot use DesugarImplicit
     type = RemoveSubstTemplateTypeParm(type);
     // If we're the resugar-map but with a value of nullptr, it means
     // we're a default template arg, which means we don't have anything
