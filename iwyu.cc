@@ -3316,7 +3316,7 @@ class InstantiatedTemplateVisitor
     //    class S; int main() { C<S> c; }
     if (isa<CXXConstructorDecl>(fn_decl)) {
       CHECK_(parent_type && "How can a constructor have no parent?");
-      parent_type = RemoveElaboration(parent_type);
+      parent_type = DesugarImplicit(parent_type);
       if (!TraverseDataAndTypeMembersOfClassHelper(
               dyn_cast<TemplateSpecializationType>(parent_type)))
         return false;
