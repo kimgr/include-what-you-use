@@ -1190,6 +1190,7 @@ bool IsPointerOrReferenceAsWritten(const Type* type) {
 }
 
 const Type* RemovePointersAndReferencesAsWritten(const Type* type) {
+  // xxx: This fails with DesugarImplicit
   type = RemoveElaboration(type);
   while (isa<PointerType>(type) ||
          isa<LValueReferenceType>(type)) {
