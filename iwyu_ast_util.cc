@@ -1167,7 +1167,7 @@ const Type* RemoveSubstTemplateTypeParm(const Type* type) {
 
 bool InvolvesTypeForWhich(const Type* type,
                           std::function<bool(const Type*)> pred) {
-  type = RemoveSubstTemplateTypeParm(type);
+  type = DesugarImplicit(type);
   if (pred(type))
     return true;
   const Decl* decl = TypeToDeclAsWritten(type);
