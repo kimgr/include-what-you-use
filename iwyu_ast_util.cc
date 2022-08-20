@@ -1202,6 +1202,7 @@ const Type* RemovePointersAndReferencesAsWritten(const Type* type) {
   return type;
 }
 
+__attribute__((unused))
 static bool IsSugared(const Type* type) {
   switch (type->getTypeClass()) {
 #define ABSTRACT_TYPE(Class, Parent)
