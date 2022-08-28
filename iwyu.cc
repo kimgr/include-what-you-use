@@ -1463,10 +1463,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     set<const Type*> autocast_types;
     for (FunctionDecl::param_const_iterator param = fn_decl->param_begin();
          param != fn_decl->param_end(); ++param) {
-      const Type* param_type = GetTypeOf(*param);
+      const Type* param_type = DesugarImplicit(GetTypeOf(*param));
       if (HasImplicitConversionConstructor(param_type)) {
         const Type* deref_param_type =
-            RemovePointersAndReferencesAsWritten(param_type);
+            DesugarImplicit(RemovePointersAndReferencesAsWritten(param_type));
         autocast_types.insert(deref_param_type);
       }
     }
@@ -1805,6 +1805,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     for (FunctionDecl::param_iterator param = decl->param_begin();
          param != decl->param_end(); ++param) {
       const Type* param_type = GetTypeOf(*param);
+      param_type = DesugarImplicit(param_type);
       if (!HasImplicitConversionConstructor(param_type))
         continue;
       const Type* deref_param_type =
