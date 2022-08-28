@@ -2291,7 +2291,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // casted-to type.  See IwyuBaseASTVisitor::VisitFunctionDecl.
     // Explicitly written CXXTemporaryObjectExpr are ignored here.
     if (expr->getStmtClass() == Stmt::StmtClass::CXXConstructExprClass) {
-      const Type* type = expr->getType().getTypePtr();
+      const Type* type = DesugarImplicit(expr->getType().getTypePtr());
       if (current_ast_node()->template HasAncestorOfType<CallExpr>() &&
           ContainsKey(GetCallerResponsibleTypesForAutocast(current_ast_node()),
                       RemoveReferenceAsWritten(type))) {
