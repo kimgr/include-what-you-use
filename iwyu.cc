@@ -3342,7 +3342,7 @@ class InstantiatedTemplateVisitor
       return true;
 
     while (type->isTypeAlias()) {
-      type = DynCastFrom(type->getAliasedType().getTypePtr());
+      type = type->getAliasedType()->getAs<TemplateSpecializationType>();
       if (!type)
         return true;
     }
