@@ -2458,6 +2458,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // in cases where it's not, we have to take responsibility.
     // TODO(csilvers): check the fn argument types as well.
     const Type* return_type = callee->getReturnType().getTypePtr();
+    return_type = DesugarImplicit(return_type);
     if (ContainsKey(GetCallerResponsibleTypesForFnReturn(callee),
                     return_type)) {
       ReportTypeUse(CurrentLoc(), return_type);
