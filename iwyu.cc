@@ -1422,9 +1422,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     set<const Type*> retval;
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
     // If the underlying type is itself a typedef, we recurse.
-    if (const TypedefType* underlying_typedef = DynCastFrom(underlying_type)) {
-      if (const TypedefNameDecl* underlying_typedef_decl
-          = DynCastFrom(TypeToDeclAsWritten(underlying_typedef))) {
+    if (const auto* underlying_typedef =
+            underlying_type->getAs<TypedefType>()) {
+      if (const auto* underlying_typedef_decl = dyn_cast<TypedefNameDecl>(TypeToDeclAsWritten(underlying_typedef))) {
         // TODO(csilvers): if one of the intermediate typedefs
         // #includes the necessary definition of the 'final'
         // underlying type, do we want to return the empty set here?
