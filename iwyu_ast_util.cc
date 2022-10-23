@@ -84,6 +84,7 @@ using clang::FunctionDecl;
 using clang::FunctionType;
 using clang::ImplicitCastExpr;
 using clang::IgnoreExprNodes;
+using clang::InitListExpr;
 using clang::InjectedClassNameType;
 using clang::LValueReferenceType;
 using clang::MaterializeTemporaryExpr;
@@ -846,22 +847,33 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
   //                 making this less useful than it should be.
   // TODO(csilvers): if the GetArg(i) expr has an implicit cast
   //                 under it, take the pre-cast type instead?
-  set<const Type*> fn_arg_types;
   for (unsigned i = 0; i < num_args; ++i) {
-    const Type* argtype = GetSugaredTypeOf(fn_args[i]);
-    // TODO(csilvers): handle RecordTypes that are a TemplateSpecializationDecl
-    InsertAllInto(GetComponentsOfType(argtype), &fn_arg_types);
-  }
-
-  for (const Type* type : fn_arg_types) {
-    // See if any of the template args in retval are the desugared form of us.
-    const Type* desugared_type = GetCanonicalType(type);
-    if (ContainsKey(desugared_types, desugared_type)) {
-      retval[desugared_type] = type;
-      if (desugared_type != type) {
-        VERRS(6) << "Remapping template arg of interest: "
-                 << PrintableType(desugared_type) << " -> "
-                 << PrintableType(type) << "\n";
+    const Expr* argexpr = fn_args[i];
+    if (argexpr->isDefaultArgument()) {
+      const Type* desugared_type = GetCanonicalType(GetTypeOf(argexpr));
+      retval[desugared_type] = nullptr;
+      VERRS(6) << "Marking function template default type of interest "
+               << "(default argument): " << PrintableType(desugared_type)
+               << "\n";
+    } else if (isa<InitListExpr>(argexpr)) {
+      const Type* desugared_type = GetCanonicalType(GetTypeOf(argexpr));
+      retval[desugared_type] = nullptr;
+      VERRS(6) << "Marking function template default type of interest "
+               << "(initializer list): " << PrintableType(desugared_type)
+               << "\n";
+    } else {
+      for (const Type* type : GetComponentsOfType(GetSugaredTypeOf(argexpr))) {
+        // See if any of the template args in retval are the desugared form of
+        // us.
+        const Type* desugared_type = GetCanonicalType(type);
+        if (ContainsKey(desugared_types, desugared_type)) {
+          retval[desugared_type] = type;
+          if (desugared_type != type) {
+            VERRS(6) << "Remapping template arg of interest: "
+                     << PrintableType(desugared_type) << " -> "
+                     << PrintableType(type) << "\n";
+          }
+        }
       }
     }
   }
