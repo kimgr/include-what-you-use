@@ -509,10 +509,9 @@ clang::SourceRange GetSourceRangeOfClassDecl(const clang::Decl* decl);
 set<clang::FunctionDecl*> GetLateParsedFunctionDecls(
     clang::TranslationUnitDecl* decl);
 
-// One can't have partial template specialization or default template
-// args for function templates, but they're complicated in their own
-// way: they can have deduced template arguments (deduced from the
-// function arguments).  When a templated function call does not
+// One can't have partial template specialization, but they're complicated
+// in their own way: they can have deduced template arguments (deduced from
+// the function arguments).  When a templated function call does not
 // specify the template arguments explicitly, but instead derives them
 // from the function arguments, clang canonicalizes (desugars) the
 // template args.  For
