@@ -20,6 +20,7 @@
 #include "iwyu_globals.h"
 #include "iwyu_include_picker.h"
 #include "iwyu_location_util.h"
+#include "iwyu_namespace.h"
 #include "iwyu_path_util.h"
 #include "iwyu_preprocessor.h"
 #include "iwyu_stl_util.h"
@@ -753,6 +754,15 @@ void IwyuFileInfo::ReportNamespaceAliasUse(SourceLocation use_loc,
   // report that as a full use of the namespace alias because whatever
   // file that namespace alias is in is now required.
   ReportFullSymbolUse(use_loc, decl, flags, comment);
+}
+
+void IwyuFileInfo::ReportNamespaceDeclUse(SourceLocation use_loc,
+                                          const NamespaceDecl* decl,
+                                          UseFlags flags, const char* comment) {
+  // In order to assign Namespace usage to the best file, don't record the
+  // usage immediately. Instead keep the use in a vector and report it
+  // after we've identified the best file to satisfy it.
+  namespace_uses.push_back(NamespaceDeclUse{use_loc, decl, flags, comment});
 }
 
 // Given a collection of symbol-uses for symbols defined in various
@@ -2236,6 +2246,14 @@ void IwyuFileInfo::ResolvePendingAnalysis() {
                                 /* flags */ UF_None,
                                 "(for un-referenced using)");
       }
+    }
+  }
+
+  for (NamespaceDeclUse& use : namespace_uses) {
+    const NamespaceDecl* decl = GetBestNamespaceDecl(use.decl);
+    if (decl != nullptr) {
+      // For each namespace use, report against the best NamespaceDecl
+      ReportFullSymbolUse(use.used_loc, decl, use.flags, use.comment);
     }
   }
 

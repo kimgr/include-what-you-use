@@ -216,6 +216,13 @@ class OneIncludeOrForwardDeclareLine {
   const clang::NamedDecl* fwd_decl_;
 };
 
+struct NamespaceDeclUse {
+  clang::SourceLocation used_loc;
+  const clang::NamespaceDecl* decl;
+  UseFlags flags;
+  const char* comment;
+};
+
 // This class holds IWYU information about a single file (FileEntry)
 // -- referred to, in the comments below, as "this file."  The keys to
 // most of these methods are all quoted header paths, which are the
@@ -249,8 +256,8 @@ class IwyuFileInfo {
   // headers.
   void AddAssociatedHeader(const IwyuFileInfo* other);
 
-  // Use these to register an iwyu declaration: either an #include,
-  // a forward-declaration, a using-declaration or a namespace alias.
+  // Use these to register an iwyu declaration: either an #include, a
+  // forward-declaration, a using-declaration or a namespace alias.
 
   void AddInclude(const clang::FileEntry* includee,
                   const string& quoted_includee, int linenumber);
@@ -303,6 +310,13 @@ class IwyuFileInfo {
   void ReportNamespaceAliasUse(clang::SourceLocation use_loc,
                                const clang::NamespaceAliasDecl* decl,
                                UseFlags flags, const char* comment);
+
+  // Called whenever a NamespaceDecl is used, generally via a using
+  // directive or an alias (a use via a symbol will force the right
+  // include via that symbol)
+  void ReportNamespaceDeclUse(clang::SourceLocation use_loc,
+                              const clang::NamespaceDecl* decl, UseFlags flags,
+                              const char* comment);
 
   // This is used when we see a // NOLINT comment, for instance.  It says
   // '#include this header file as-is, without any public-header mapping.'
@@ -396,6 +410,11 @@ class IwyuFileInfo {
 
   // Holds all the lines (#include and fwd-declare) that are reported.
   vector<OneIncludeOrForwardDeclareLine> lines_;
+
+  // Store all namespace uses that we find. Report them in
+  // ResolvePendingAnalysis after we find the best header for each
+  // namespace.
+  vector<NamespaceDeclUse> namespace_uses;
 
   // Maps all the using-decls that are reported to a bool indicating whether
   // or not a the using decl has been referenced in this file.

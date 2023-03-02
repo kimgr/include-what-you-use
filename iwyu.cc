@@ -106,6 +106,7 @@
 #include "iwyu_globals.h"
 #include "iwyu_lexer_utils.h"
 #include "iwyu_location_util.h"
+#include "iwyu_namespace.h"
 #include "iwyu_output.h"
 #include "iwyu_path_util.h"
 #include "iwyu_port.h"  // for CHECK_
@@ -183,6 +184,7 @@ using clang::LinkageSpecDecl;
 using clang::MemberExpr;
 using clang::NamedDecl;
 using clang::NamespaceAliasDecl;
+using clang::NamespaceDecl;
 using clang::NestedNameSpecifier;
 using clang::NestedNameSpecifierLoc;
 using clang::OverloadExpr;
@@ -336,6 +338,9 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     if (ShouldPrintSymbolFromCurrentFile()) {
       errs() << AnnotatedName(GetKindName(decl)) << PrintablePtr(decl)
              << PrintableDecl(decl) << "\n";
+    }
+    if (NamedDecl* named_decl = DynCastFrom(decl)) {
+      RecordDeclNamespaces(named_decl);
     }
     return Base::TraverseDecl(decl);
   }
@@ -1709,6 +1714,17 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const FileEntry* used_in = GetFileEntry(used_loc);
     preprocessor_info().FileInfoFor(used_in)->ReportNamespaceAliasUse(
         used_loc, namespace_alias, use_flags, nullptr);
+  }
+
+  void ReportNamespaceDeclUse(SourceLocation used_loc,
+                              const NamespaceDecl* namespace_decl,
+                              const char* comment = nullptr,
+                              UseFlags extra_use_flags = 0) {
+    // Canonicalize the use location and report the use.
+    used_loc = GetCanonicalUseLocation(used_loc, namespace_decl);
+    const FileEntry* used_in = GetFileEntry(used_loc);
+    preprocessor_info().FileInfoFor(used_in)->ReportNamespaceDeclUse(
+        used_loc, namespace_decl, extra_use_flags, nullptr);
   }
 
   //------------------------------------------------------------
@@ -3912,7 +3928,7 @@ class IwyuAstConsumer
   bool VisitNamespaceAliasDecl(clang::NamespaceAliasDecl* decl) {
     if (CanIgnoreCurrentASTNode())
       return true;
-    ReportDeclUse(CurrentLoc(), decl->getNamespace());
+    ReportNamespaceDeclUse(CurrentLoc(), decl->getNamespace());
 
     // Note the namespace alias has been declared, so we can check if
     // it gets used.
@@ -4069,7 +4085,12 @@ class IwyuAstConsumer
   bool VisitUsingDirectiveDecl(clang::UsingDirectiveDecl *decl) {
     if (CanIgnoreCurrentASTNode())
       return true;
-    ReportDeclUse(CurrentLoc(), decl->getNominatedNamespaceAsWritten());
+
+    if (const NamespaceDecl* target_ns =
+            DynCastFrom(decl->getNominatedNamespaceAsWritten())) {
+      ReportNamespaceDeclUse(CurrentLoc(), target_ns);
+    }
+
     return Base::VisitUsingDirectiveDecl(decl);
   }
 
