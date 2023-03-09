@@ -15,4 +15,9 @@
 // Alias a namespace defined in another file
 namespace i2_ns = i1_ns1::i1_ns2;
 
+// Another namespace to be referenced (for unused alias test)
+namespace i2_ns2 {
+void function1(void);
+}
+
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_NAMESPACE_ALIAS_D2_H_

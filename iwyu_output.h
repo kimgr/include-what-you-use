@@ -250,7 +250,7 @@ class IwyuFileInfo {
   void AddAssociatedHeader(const IwyuFileInfo* other);
 
   // Use these to register an iwyu declaration: either an #include,
-  // a forward-declaration or a using-declaration.
+  // a forward-declaration, a using-declaration or a namespace alias.
 
   void AddInclude(const clang::FileEntry* includee,
                   const string& quoted_includee, int linenumber);
@@ -260,6 +260,7 @@ class IwyuFileInfo {
                          bool definitely_keep_fwd_decl);
 
   void AddUsingDecl(const clang::UsingDecl* using_decl);
+  void AddNamespaceAlias(const clang::NamespaceAliasDecl* namespace_alias);
 
   // Use these to register an iwyu 'use'.  It's preferable to indicate
   // an explicit type or decl being used, but if that's not available,
@@ -296,6 +297,12 @@ class IwyuFileInfo {
   void ReportUsingDeclUse(clang::SourceLocation use_loc,
                           const clang::UsingDecl* using_decl,
                           UseFlags flags, const char* comment);
+
+  // Called whenever a NamedDecl is accessed through a NamespaceAliasDecl.
+  // ie: namespace foo::bar = baz; baz::type A;
+  void ReportNamespaceAliasUse(clang::SourceLocation use_loc,
+                               const clang::NamespaceAliasDecl* decl,
+                               UseFlags flags, const char* comment);
 
   // This is used when we see a // NOLINT comment, for instance.  It says
   // '#include this header file as-is, without any public-header mapping.'
@@ -393,6 +400,10 @@ class IwyuFileInfo {
   // Maps all the using-decls that are reported to a bool indicating whether
   // or not a the using decl has been referenced in this file.
   map<const clang::UsingDecl*, bool> using_decl_referenced_;
+
+  // Maps all the namespace-aliases that are reported to a bool indicating
+  // whether or not a the namespace alias has been referenced in this file.
+  map<const clang::NamespaceAliasDecl*, bool> namespace_alias_referenced_;
 
   // We also hold the line information in a few other data structures,
   // for ease of references.

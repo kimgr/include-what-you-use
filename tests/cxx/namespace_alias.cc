@@ -15,6 +15,9 @@
 #include "tests/cxx/namespace_alias-d2.h"
 #include "tests/cxx/namespace_alias-i1.h"
 
+// IWYU: Namespace alias unused_ns is unused.*
+namespace unused_ns = i2_ns2;
+
 void func() {
   // i1_ns1::i1_ns2::function1() from namespace_alias-d1.h
   // i2_ns from namespace_alias-d2.h
@@ -38,7 +41,7 @@ tests/cxx/namespace_alias.cc should remove these lines:
 
 The full include-list for tests/cxx/namespace_alias.cc:
 #include "tests/cxx/namespace_alias-d1.h"  // for function1
-#include "tests/cxx/namespace_alias-d2.h"  // for i2_ns
+#include "tests/cxx/namespace_alias-d2.h"  // for i2_ns, i2_ns2
 #include "tests/cxx/namespace_alias-d3.h"  // for function1
 #include "tests/cxx/namespace_alias-d4.h"  // for i4_ns
 

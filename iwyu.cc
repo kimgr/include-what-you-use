@@ -182,6 +182,7 @@ using clang::LValueReferenceType;
 using clang::LinkageSpecDecl;
 using clang::MemberExpr;
 using clang::NamedDecl;
+using clang::NamespaceAliasDecl;
 using clang::NestedNameSpecifier;
 using clang::NestedNameSpecifierLoc;
 using clang::OverloadExpr;
@@ -1699,6 +1700,17 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       ReportTypeUse(used_loc, type);
   }
 
+  void ReportNamespaceAliasUse(SourceLocation used_loc,
+                               NamespaceAliasDecl* namespace_alias) {
+    UseFlags use_flags = ComputeUseFlags(current_ast_node());
+
+    // Canonicalize the use location and report the use.
+    used_loc = GetCanonicalUseLocation(used_loc, namespace_alias);
+    const FileEntry* used_in = GetFileEntry(used_loc);
+    preprocessor_info().FileInfoFor(used_in)->ReportNamespaceAliasUse(
+        used_loc, namespace_alias, use_flags, nullptr);
+  }
+
   //------------------------------------------------------------
   // Visitors of types derived from clang::Decl.
 
@@ -2581,7 +2593,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // If this is a NamespaceAlias, then mark the alias as used,
     // requiring whichever file(s) declare the alias.
     if (nns->getKind() == NestedNameSpecifier::NamespaceAlias) {
-      ReportDeclUse(CurrentLoc(), nns->getAsNamespaceAlias());
+      ReportNamespaceAliasUse(CurrentLoc(), nns->getAsNamespaceAlias());
     }
 
     if (!Base::VisitNestedNameSpecifier(nns))
@@ -3901,6 +3913,22 @@ class IwyuAstConsumer
     if (CanIgnoreCurrentASTNode())
       return true;
     ReportDeclUse(CurrentLoc(), decl->getNamespace());
+
+    // Note the namespace alias has been declared, so we can check if
+    // it gets used.
+    IwyuFileInfo* file_info =
+        preprocessor_info().FileInfoFor(CurrentFileEntry());
+    if (file_info) {
+      file_info->AddNamespaceAlias(decl);
+    } else {
+      // For namespace aliases in a PCH, the preprocessor won't have any
+      // location information. As far as we know, that's the only time the
+      // file-info will be null, so assert that we have a PCH on the
+      // command-line.
+      const string& pch_include =
+          compiler()->getInvocation().getPreprocessorOpts().ImplicitPCHInclude;
+      CHECK_(!pch_include.empty());
+    }
     return Base::VisitNamespaceAliasDecl(decl);
   }
 

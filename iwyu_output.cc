@@ -46,6 +46,7 @@ using clang::EnumDecl;
 using clang::FileEntry;
 using clang::FunctionDecl;
 using clang::NamedDecl;
+using clang::NamespaceAliasDecl;
 using clang::NamespaceDecl;
 using clang::RecordDecl;
 using clang::SourceLocation;
@@ -614,6 +615,19 @@ void IwyuFileInfo::AddUsingDecl(const UsingDecl* using_decl) {
            << internal::GetQualifiedNameAsString(using_decl) << "\n";
 }
 
+void IwyuFileInfo::AddNamespaceAlias(
+    const NamespaceAliasDecl* namespace_alias) {
+  CHECK_(namespace_alias && "namespace_alias unexpectedly nullptr");
+  namespace_alias_referenced_.insert(std::make_pair(namespace_alias, false));
+  const SourceRange decl_lines = namespace_alias->getSourceRange();
+  int start_linenum = GetLineNumber(GetInstantiationLoc(decl_lines.getBegin()));
+  int end_linenum = GetLineNumber(GetInstantiationLoc(decl_lines.getEnd()));
+  VERRS(6) << "Found namespace-alias: " << GetFilePath(file_) << ":"
+           << to_string(start_linenum) << "-" << to_string(end_linenum) << ": "
+           << internal::PrintablePtr(namespace_alias)
+           << internal::GetQualifiedNameAsString(namespace_alias) << "\n";
+}
+
 static void LogSymbolUse(const string& prefix, const OneUse& use) {
   string decl_loc;
   string printable_ptr;
@@ -719,6 +733,26 @@ void IwyuFileInfo::ReportUsingDeclUse(SourceLocation use_loc,
   // that as a full use of the using decl because whatever file that
   // using decl is in is now required.
   ReportFullSymbolUse(use_loc, using_decl, flags, comment);
+}
+
+void IwyuFileInfo::ReportNamespaceAliasUse(SourceLocation use_loc,
+                                           const NamespaceAliasDecl* decl,
+                                           UseFlags flags,
+                                           const char* comment) {
+  // If accessing a symbol through a namespace alias in the same file
+  // that contains the namespace alias, we must mark the namespace
+  // alias as referenced. At the end of traversing the AST, we
+  // check for unused a namespace aliases.
+  auto namespace_alias_status = namespace_alias_referenced_.find(decl);
+
+  if (namespace_alias_status != namespace_alias_referenced_.end()) {
+    namespace_alias_status->second = true;
+  }
+
+  // When a symbol is accessed through a namespace alias, we must
+  // report that as a full use of the namespace alias because whatever
+  // file that namespace alias is in is now required.
+  ReportFullSymbolUse(use_loc, decl, flags, comment);
 }
 
 // Given a collection of symbol-uses for symbols defined in various
@@ -2201,6 +2235,38 @@ void IwyuFileInfo::ResolvePendingAnalysis() {
                                 using_decl->shadow_begin()->getTargetDecl(),
                                 /* flags */ UF_None,
                                 "(for un-referenced using)");
+      }
+    }
+  }
+
+  // Scan for unused namespace aliases - it should be possible to
+  // remove these from translation units.
+  std::string filepath = GetFilePath(file_);
+  if (!IsHeaderFile(filepath)) {
+    for (map<const NamespaceAliasDecl*, bool>::value_type
+             namespace_alias_status : namespace_alias_referenced_) {
+      if (!namespace_alias_status.second) {
+        // TODO: warning message output inline here. This should go
+        // through EmitWarningMessages
+        const NamespaceAliasDecl* decl = namespace_alias_status.first;
+        const SourceRange decl_lines = decl->getSourceRange();
+        const SourceLocation spelling_loc =
+            GetSpellingLoc(decl_lines.getBegin());
+        const SourceLocation instantiation_loc =
+            GetInstantiationLoc(decl_lines.getBegin());
+        string warning = PrintableLoc(spelling_loc) + ": warning: ";
+        warning += ("Namespace alias " +
+                    internal::GetQualifiedNameAsString(decl) + " is unused");
+        warning += ".\n";
+        if (instantiation_loc != spelling_loc) {
+          // Only set/print this if it's different from the spelling location.
+          warning += PrintableLoc(instantiation_loc) + ": note: used here.\n";
+        }
+        if (ShouldPrint(3)) {
+          errs() << warning;
+        } else if (ShouldPrint(2)) {
+          // TODO(csilvers): print one warning per sym per file.
+        }
       }
     }
   }
