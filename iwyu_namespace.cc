@@ -176,7 +176,8 @@ void RecordDeclNamespaces(const NamedDecl* decl) {
 
   const DeclContext* decl_context = decl->getDeclContext();
 
-  bool fwd_decl = IsForwardDecl(decl);
+  if (IsForwardDecl(decl))
+    return;
 
   for (; decl_context; decl_context = decl_context->getParent()) {
     // Stop traversing up the context - function arguments, structure
@@ -202,9 +203,7 @@ void RecordDeclNamespaces(const NamedDecl* decl) {
       string filepath = GetFilePath(ns);
 
       VERRS(7) << "Recording declaration in namespace " << ns_ident << " for "
-               << decl->getName() << " fwd("
-               << fwd_decl << ") in filepath " << filepath
-               << "\n";
+               << decl->getName() << " in filepath " << filepath << "\n";
 
       // Get or create file_info and increment count
       IwyuNsFileInfo* fileinfo = getNsFileInfo(ns, ns_ident, filepath);
