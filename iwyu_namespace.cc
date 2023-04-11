@@ -89,7 +89,6 @@ class IwyuNsFileInfo {
 namespace include_what_you_use {
 
 static map<string, map<string, IwyuNsFileInfo*>> nsfileinfo;
-static map<string, const NamespaceDecl*> nsmap;
 
 static IwyuNsFileInfo* getNsFileInfo(const NamespaceDecl* ns, string ns_ident,
                                      string filepath) {
@@ -218,17 +217,7 @@ void RecordDeclNamespaces(const NamedDecl* decl) {
 }
 
 const NamespaceDecl* GetBestNamespaceDecl(const NamespaceDecl* ns) {
-  string ns_ident = string(ns->getName());
-
-  auto result = nsmap.find(ns_ident);
-  if (result != nsmap.end()) {
-    return result->second;
-  }
-
-  const NamespaceDecl* best_decl = getBestNamespaceDecl(ns);
-  nsmap[ns_ident] = best_decl;
-
-  return best_decl;
+  return getBestNamespaceDecl(ns);
 }
 
 }  // namespace include_what_you_use
