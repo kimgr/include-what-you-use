@@ -54,11 +54,14 @@
 //     symbols being used from the namespace to get an appropriate
 //     header.
 
+using clang::BlockDecl;
 using clang::DeclContext;
+using clang::FunctionDecl;
 using clang::NamedDecl;
 using clang::NamespaceDecl;
-using std::string;
+using clang::TagDecl;
 using std::map;
+using std::string;
 using std::vector;
 
 namespace {
