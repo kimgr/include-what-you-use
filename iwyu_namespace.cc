@@ -187,14 +187,8 @@ void RecordDeclNamespaces(const NamedDecl* decl) {
     // as the function/structure will be.
     //
     // TODO: others?
-    if (const clang::FunctionDecl* func = DynCastFrom(decl_context)) {
-      return;
-    }
-    if (const clang::TagDecl* func = DynCastFrom(decl_context)) {
-      return;
-    }
-    if (const clang::BlockDecl* func = DynCastFrom(decl_context)) {
-      return;
+    if (isa<FunctionDecl, TagDecl, BlockDecl>(decl_context)) {
+      break;
     }
 
     if ((ns = DynCastFrom(decl_context))) {
