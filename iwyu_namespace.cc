@@ -174,12 +174,11 @@ void RecordDeclNamespaces(const NamedDecl* decl) {
   if (isa<NamespaceDecl>(decl))
     return;
 
-  const DeclContext* decl_context = decl->getDeclContext();
-
   if (IsForwardDecl(decl))
     return;
 
-  for (; decl_context; decl_context = decl_context->getParent()) {
+  for (const DeclContext* decl_context = decl->getDeclContext(); decl_context;
+       decl_context = decl_context->getParent()) {
     // Stop traversing up the context - function arguments, structure
     // members and variables in block scope don't need to be recorded,
     // as the function/structure will be.
