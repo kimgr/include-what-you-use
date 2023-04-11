@@ -169,8 +169,6 @@ static const NamespaceDecl* getBestNamespaceDecl(const NamespaceDecl* ns) {
 }
 
 void RecordDeclNamespaces(const NamedDecl* decl) {
-  const NamespaceDecl* ns;
-
   // Ignore declarations of sub-namespaces i.e. don't count them as a
   // forward decl or full decl.
   if (isa<NamespaceDecl>(decl))
@@ -191,7 +189,7 @@ void RecordDeclNamespaces(const NamedDecl* decl) {
       break;
     }
 
-    if ((ns = DynCastFrom(decl_context))) {
+    if (const auto *ns = dyn_cast<NamespaceDecl>(decl_context)) {
       // This is the namespace within which the used symbol is declared
 
       // Get full namespace string...
