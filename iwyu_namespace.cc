@@ -69,7 +69,6 @@ class IwyuNsFileInfo {
   const NamespaceDecl* decl;
   string filepath;
 
-  unsigned fwd_decl_count;
   unsigned full_decl_count;
 
  public:
@@ -82,15 +81,8 @@ class IwyuNsFileInfo {
   const string GetFilePath() const {
     return filepath;
   };
-  unsigned GetForwardDeclCount() const {
-    return fwd_decl_count;
-  };
   unsigned GetFullDeclCount() const {
     return full_decl_count;
-  };
-
-  void AddForwardDecl() {
-    fwd_decl_count++;
   };
   void AddFullDecl() {
     full_decl_count++;
@@ -218,14 +210,9 @@ void RecordDeclNamespaces(const NamedDecl* decl) {
                << fwd_decl << ") in filepath " << filepath
                << "\n";
 
-      // Get or create file_info...
+      // Get or create file_info and increment count
       IwyuNsFileInfo* fileinfo = getNsFileInfo(ns, ns_ident, filepath);
-
-      // Increment counts
-      if (fwd_decl)
-        fileinfo->AddForwardDecl();
-      else
-        fileinfo->AddFullDecl();
+      fileinfo->AddFullDecl();
 
       // TODO: should we count declarations in nested namespaces? I
       // feel like we should
