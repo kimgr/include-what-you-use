@@ -67,19 +67,15 @@ using std::vector;
 namespace {
 class IwyuNsFileInfo {
   const NamespaceDecl* decl;
-  string filepath;
-
   unsigned full_decl_count;
 
  public:
-  IwyuNsFileInfo(const NamespaceDecl* decl, std::string filepath)
-      : decl(decl), filepath(filepath){};
+  IwyuNsFileInfo(const NamespaceDecl* decl)
+      : decl(decl) {
+  }
 
   const NamespaceDecl* GetNamespaceDecl() const {
     return decl;
-  };
-  const string GetFilePath() const {
-    return filepath;
   };
   unsigned GetFullDeclCount() const {
     return full_decl_count;
@@ -107,7 +103,7 @@ static IwyuNsFileInfo* getNsFileInfo(const NamespaceDecl* ns, string ns_ident,
   } else {
     // filepath not known for this namespace. Create an
     // IwyuNsFileInfo for it
-    fileinfo = new IwyuNsFileInfo(ns, filepath);
+    fileinfo = new IwyuNsFileInfo(ns);
     m[filepath] = fileinfo;
   }
 
