@@ -85,7 +85,7 @@ class IwyuNsFileInfo {
   }
 
   void AddFullDecl() {
-    full_decl_count++;
+    ++full_decl_count;
   }
 };
 }  // namespace
