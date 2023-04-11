@@ -91,25 +91,15 @@ class IwyuNsFileInfo {
 
 namespace include_what_you_use {
 
-static map<string, map<string, IwyuNsFileInfo*>> nsfileinfo;
+static map<string, map<string, IwyuNsFileInfo>> nsfileinfo;
 
 static IwyuNsFileInfo* getNsFileInfo(const NamespaceDecl* ns, string ns_ident,
                                      string filepath) {
-  IwyuNsFileInfo* fileinfo = nullptr;
-
-  // Get the intermediate map, creating it if necessary
-  map<string, IwyuNsFileInfo*>& m = nsfileinfo[ns_ident];
-
-  if (auto pair = m.find(filepath); pair != m.end()) {
-    fileinfo = pair->second;
-  } else {
-    // filepath not known for this namespace. Create an
-    // IwyuNsFileInfo for it
-    fileinfo = new IwyuNsFileInfo(ns);
-    m[filepath] = fileinfo;
-  }
-
-  return fileinfo;
+  // Get or insert intermediate map
+  map<string, IwyuNsFileInfo>& m = nsfileinfo[ns_ident];
+  // Get or insert file info
+  auto inserted = m.emplace(filepath, ns);
+  return &(inserted.first->second);
 }
 
 static const NamespaceDecl* getBestNamespaceDecl(const NamespaceDecl* ns) {
@@ -123,8 +113,8 @@ static const NamespaceDecl* getBestNamespaceDecl(const NamespaceDecl* ns) {
   bool multiple_files = false;
 
   for (auto& [filepath, fileinfo] : m) {
-    decl = fileinfo->GetNamespaceDecl();
-    unsigned count = fileinfo->GetFullDeclCount();
+    decl = fileinfo.GetNamespaceDecl();
+    unsigned count = fileinfo.GetFullDeclCount();
 
     if (count > 0) {
       if (!have_full_decls) {
