@@ -73,19 +73,20 @@ class IwyuNsFileInfo {
   unsigned full_decl_count;
 
  public:
-  IwyuNsFileInfo(const NamespaceDecl* decl)
-      : decl(decl), full_decl_count(0) {
+  IwyuNsFileInfo(const NamespaceDecl* decl) : decl(decl), full_decl_count(0) {
   }
 
   const NamespaceDecl* GetNamespaceDecl() const {
     return decl;
-  };
+  }
+
   unsigned GetFullDeclCount() const {
     return full_decl_count;
-  };
+  }
+
   void AddFullDecl() {
     full_decl_count++;
-  };
+  }
 };
 }  // namespace
 
