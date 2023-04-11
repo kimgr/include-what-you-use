@@ -74,7 +74,7 @@ class IwyuNsFileInfo {
 
  public:
   IwyuNsFileInfo(const NamespaceDecl* decl)
-      : decl(decl) {
+      : decl(decl), full_decl_count(0) {
   }
 
   const NamespaceDecl* GetNamespaceDecl() const {
