@@ -18,6 +18,7 @@
 #include "iwyu_verrs.h"          // for VERRS
 #include "clang/AST/Decl.h"      // for NamespaceDecl, NamedDecl
 #include "clang/AST/DeclBase.h"  // for DeclContext
+#include "llvm/Support/Casting.h"  // for isa, dyn_cast
 
 // This translation unit contains helpers to track how namespaces are
 // used. In particular it tries to suggest the best #include when a
@@ -60,6 +61,8 @@ using clang::FunctionDecl;
 using clang::NamedDecl;
 using clang::NamespaceDecl;
 using clang::TagDecl;
+using llvm::isa;
+using llvm::dyn_cast;
 using std::map;
 using std::string;
 using std::vector;
@@ -170,7 +173,7 @@ void RecordDeclNamespaces(const NamedDecl* decl) {
 
   // Ignore declarations of sub-namespaces i.e. don't count them as a
   // forward decl or full decl.
-  if ((ns = DynCastFrom(decl)))
+  if (isa<NamespaceDecl>(decl))
     return;
 
   const DeclContext* decl_context = decl->getDeclContext();
