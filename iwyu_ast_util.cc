@@ -1405,9 +1405,57 @@ bool CanBeOpaqueDeclared(const clang::EnumType* type) {
 
 // --- Utilities for Stmt.
 
+static bool IsFunctionCall(const Expr* expr, const char* name,
+                           size_t num_params) {
+  const auto* call_expr = dyn_cast_or_null<CallExpr>(expr);
+  if (!call_expr)
+    return false;
+
+  const FunctionDecl* function = call_expr->getDirectCallee();
+  if (function) {
+    VERRS(1) << "IsFunctionCall: found function: " << PrintableDecl(function)
+             << ", name=" << function->getQualifiedNameAsString()
+             << ", params=" << function->param_size() << "\n";
+    return (function->getQualifiedNameAsString() == name &&
+            call_expr->getNumArgs() == num_params &&
+            function->param_size() == num_params);
+  }
+
+  const auto* lookup_expr =
+      dyn_cast_or_null<clang::UnresolvedLookupExpr>(call_expr->getCallee());
+  if (lookup_expr) {
+    std::string unresolved_name;
+    const NestedNameSpecifier* nns = lookup_expr->getQualifier();
+    if (nns) {
+      unresolved_name = PrintableNestedNameSpecifier(nns);
+    }
+    unresolved_name += lookup_expr->getName().getAsString();
+
+    VERRS(1) << "IsFunctionCall: found lookup expr: " << PrintableStmt(lookup_expr)
+             << ", name=" << unresolved_name << "\n";
+
+    const clang::TypeSourceInfo* tsi = lookup_expr->getNameInfo().getNamedTypeInfo();
+    if (tsi) {
+      VERRS(1) << "ooh, there's TypeSourceInfo\n";
+      VERRS(1) << PrintableType(tsi->getType().getTypePtr()) << "\n";
+    } else {
+      VERRS(1) << "oops, no TypeSourceInfo\n";
+    }
+    return (unresolved_name == name && call_expr->getNumArgs() == num_params);
+  }
+  return false;
+}
+
 bool IsAddressOf(const Expr* expr) {
   if (const UnaryOperator* unary = DynCastFrom(expr->IgnoreParens()))
     return unary->getOpcode() == clang::UO_AddrOf;
+
+  if (IsFunctionCall(expr, "std::addressof", 1))
+    return true;
+
+  if (IsFunctionCall(expr, "std::__addressof", 1))
+    return true;
+
   return false;
 }
 
