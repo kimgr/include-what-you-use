@@ -98,7 +98,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
                            empty_file_info_(nullptr, this, "") {}
 
   // The client *must* call this from the beginning of HandleTranslationUnit()
-  void HandlePreprocessingDone();
+  void HandlePreprocessingDone(clang::Preprocessor& pp);
 
   // More direct ways of getting at this information
   const clang::FileEntry* main_file() const {
@@ -312,9 +312,11 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // context to know how to interpret the tokens we see, in general).
   map<string, clang::SourceLocation> macros_definition_loc_;  // key: macro name
 
-  // This should logically be a set, but set<> needs Token::operator<
-  // which we don't have.  Luckily, a vector works just as well.
-  vector<clang::Token> macros_called_from_macros_;
+  // This should logically be a set, but set<> needs Token::operator< which we
+  // don't have.  Luckily, a vector works just as well. We store the token
+  // containing the macro identifier, and whether the next non-comment token is
+  // an lparen, to be able to detect function-like macros.
+  vector<std::pair<clang::Token, bool>> macros_expanded_from_macros_;
 
   // This maps from the include-name as written in the program
   // (including <>'s or ""'s) to the FileEntry we loaded for that

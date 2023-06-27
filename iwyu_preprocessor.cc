@@ -648,6 +648,10 @@ void IwyuPreprocessorInfo::MacroDefined(const Token& id,
   ERRSYM(GetFileEntry(macro_loc))
       << "[ #define     ] " << PrintableLoc(macro_loc)
       << ": " << GetName(id) << "\n";
+
+  if (macro_loc.isValid())
+    macros_definition_loc_[GetName(id)] = macro_loc;
+
   // We'd like to do an iwyu check on every token in the macro
   // definition, but without knowing how and where the macro will be
   // used, we don't have enough context to.  But we *can* check those
@@ -658,13 +662,34 @@ void IwyuPreprocessorInfo::MacroDefined(const Token& id,
   // body, and then after reading the whole file we do an iwyu
   // analysis on the results.  (This can make mistakes if the code
   // #undefs and re-defines a macro, but should work fine in practice.)
-  if (macro_loc.isValid())
-    macros_definition_loc_[GetName(id)] = macro_loc;
-  for (const Token& token_in_macro : macro->tokens()) {
-    if (token_in_macro.getKind() == clang::tok::identifier &&
-        token_in_macro.getIdentifierInfo()->hasMacroDefinition()) {
-      macros_called_from_macros_.push_back(token_in_macro);
+  // Distinguish between function-like and object-like expansions.
+  const Token* pending_macro_token = nullptr;
+  for (const Token& token : macro->tokens()) {
+    // Skip over comment tokens (which may be there in in -E -C[C] mode)
+    if (token.is(clang::tok::comment))
+      continue;
+
+    // If we have seen a macro expansion and mark the expansion as function-like
+    // if the next token is an lparen, otherwise object-like.
+    if (pending_macro_token) {
+      macros_expanded_from_macros_.push_back(
+          std::make_pair(*pending_macro_token, token.is(clang::tok::l_paren)));
+      pending_macro_token = nullptr;
     }
+
+    // If the token is an identifier belonging to a macro, remember the token
+    // for next iteration.
+    if (token.getKind() == clang::tok::identifier &&
+        token.getIdentifierInfo()->hasMacroDefinition()) {
+      pending_macro_token = &token;
+    }
+  }
+
+  // Add any pending token; it can't be function like since the identifier was
+  // the last token in the macro.
+  if (pending_macro_token) {
+    macros_expanded_from_macros_.push_back(
+        std::make_pair(*pending_macro_token, false));
   }
 }
 
@@ -1004,7 +1029,7 @@ void IwyuPreprocessorInfo::PopulateTransitiveIncludeMap() {
 //------------------------------------------------------------
 // The public API.
 
-void IwyuPreprocessorInfo::HandlePreprocessingDone() {
+void IwyuPreprocessorInfo::HandlePreprocessingDone(Preprocessor& pp) {
   CHECK_(main_file_ && "Main file should be present");
   FileChanged_ExitToFile(SourceLocation(), main_file_);
 
@@ -1014,8 +1039,21 @@ void IwyuPreprocessorInfo::HandlePreprocessingDone() {
   // (For instance, if we see '#define FOO(x) BAR(!x)', BAR doesn't
   // actually have to be defined until FOO is actually used, which
   // could be later in the preprocessing.)
-  for (const Token& token : macros_called_from_macros_) {
-    FindAndReportMacroUse(GetName(token), token.getLocation());
+  for (const std::pair<Token, bool>& macro : macros_expanded_from_macros_) {
+    const Token& token = macro.first;
+    const bool function_like = macro.second;
+
+    // We only register macro tokens with identifier info, so it should now be
+    // possible to resolve details about the macro. If there are none, the macro
+    // may have been undefined, so be defensive.
+    const MacroInfo* macro_info = pp.getMacroInfo(token.getIdentifierInfo());
+    if (!macro_info)
+      continue;
+
+    // Only report if definition and use agree on function-like-ness.
+    if (macro_info->isFunctionLike() == function_like) {
+      FindAndReportMacroUse(GetName(token), token.getLocation());
+    }
   }
 
   // Other post-processing steps.

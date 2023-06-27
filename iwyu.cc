@@ -3716,8 +3716,8 @@ class IwyuAstConsumer
   // Called once at the end of the compilation.
   void HandleTranslationUnit(ASTContext& context) override {  // NOLINT
     // TODO(csilvers): automatically detect preprocessing is done, somehow.
-    const_cast<IwyuPreprocessorInfo*>(&preprocessor_info())->
-        HandlePreprocessingDone();
+    const_cast<IwyuPreprocessorInfo*>(&preprocessor_info())
+        ->HandlePreprocessingDone(compiler()->getPreprocessor());
 
     TranslationUnitDecl* tu_decl = context.getTranslationUnitDecl();
 
