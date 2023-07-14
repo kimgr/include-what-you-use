@@ -1626,8 +1626,83 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // with the warning message that iwyu emits.
   virtual void ReportTypeUse(SourceLocation used_loc, const Type* type,
                              const char* comment = nullptr) {
-    ReportTypeUseInternal(used_loc, type, comment,
-                          this->getDerived().GetBlockedTypes());
+    set<const Type*> component_types = ExpandComponentTypes(type);
+
+    set<const Type*> provided_types = this->getDerived().GetBlockedTypes();
+    set<const Type*> types_to_report;
+    std::set_difference(component_types.begin(), component_types.end(),
+                        provided_types.begin(), provided_types.end(),
+                        std::inserter(types_to_report, types_to_report.end()));
+
+    // TODO: naive report all types in types_to_report
+  }
+
+  set<const Type*> ExpandComponentTypes(const Type* type) {
+    set<const Type*> components;
+    if (CanIgnoreType(type))
+      return components;
+
+    // Enum type uses can be ignored. Their size is known (either implicitly
+    // 'int' or from a mandatory transitive inclusion of a non-fixed enum full
+    // declaration, or explicitly using a C++ 11 enum base). Only if an enum
+    // type or its enumerators are explicitly mentioned will they be reported
+    // by IWYU from VisitTagType or VisitDeclRefExpr correspondingly.
+    if (type->getAs<EnumType>())
+      return components;
+
+    // Types in fwd-decl-context should be ignored here and reported from more
+    // specialized places, i.e. when they are explicitly written. But in fact,
+    // this check is redundant because TypeToDeclAsWritten returns nullptr for
+    // pointers and references.
+    if (IsPointerOrReferenceAsWritten(type))
+      return components;
+
+    // For typedefs, the user of the type is sometimes the one
+    // responsible for the underlying type.  We check if that is the
+    // case here, since we might be using a typedef type from
+    // anywhere.  ('autocast' is similar, but is handled in
+    // VisitCastExpr; 'fn-return-type' is also similar and is
+    // handled in HandleFunctionCall.)
+    if (const auto* typedef_type = type->getAs<TypedefType>()) {
+      // One exception: if this TypedefType is being used in another
+      // typedef (that is, 'typedef MyTypedef OtherTypdef'), then the
+      // user -- the other typedef -- is never responsible for the
+      // underlying type.  Instead, users of that typedef are.
+      const ASTNode* ast_node = MostElaboratedAncestor(current_ast_node());
+      if (!ast_node->ParentIsA<TypedefNameDecl>()) {
+        const TypedefNameDecl* typedef_decl = typedef_type->getDecl();
+        const set<const Type*>& provided_with_typedef =
+            GetProvidedTypesForTypedef(typedef_decl);
+        // If any of the used types are themselves typedefs, this will
+        // result in a recursive expansion.  Note we are careful to
+        // recurse inside this class, and not go back to subclasses.
+        const Type* type = RemovePointersAndReferencesAsWritten(
+            typedef_decl->getUnderlyingType().getTypePtr());
+        set<const Type*> typedef_components =
+            IwyuBaseAstVisitor<Derived>::ExpandComponentTypes(type);
+
+        // The resulting components are every typedef component that is not in
+        // provided_with_typedef, a.k.a the set difference.
+        std::set_difference(
+            typedef_components.begin(), typedef_components.end(),
+            provided_with_typedef.begin(), provided_with_typedef.end(),
+            std::inserter(components, components.end()));
+      }
+      return components;
+    }
+
+    // Map private types like __normal_iterator to their public counterpart.
+    type = MapPrivateTypeToPublicType(type);
+    components.insert(type);
+
+    if (const auto* template_spec_type =
+            dyn_cast<TemplateSpecializationType>(Desugar(type))) {
+      set<const Type*> tplspec_components =
+          this->getDerived().ExpandTplSpecComponentTypes(template_spec_type);
+      // set union
+      components.insert(tplspec_components.begin(), tplspec_components.end());
+    }
+    return components;
   }
 
   void ReportTypesUse(SourceLocation used_loc, const set<const Type*>& types) {
@@ -2650,6 +2725,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                                    const set<const Type*>& blocked_types) =
       delete;
 
+  set<const Type*> ExpandTplSpecComponentTypes(
+      const TemplateSpecializationType*) = delete;
+
   const set<const Type*>& GetBlockedTypes() const = delete;
 
   void ReportTypeUseInternal(SourceLocation used_loc, const Type* type,
@@ -3318,6 +3396,12 @@ class InstantiatedTemplateVisitor
                                    const set<const Type*>& /*blocked_types*/) {
     // TODO(bolshakov): should 'blocked_types' argument be considered here?
     TraverseDataAndTypeMembersOfClassHelper(type);
+  }
+
+  set<const Type*> ExpandTplSpecComponentTypes(
+      const TemplateSpecializationType* type) {
+    // TODO: Heh, this might be harder than I thought.
+    return set<const Type*>();
   }
 
   const set<const Type*>& GetBlockedTypes() const {
@@ -4324,6 +4408,12 @@ class IwyuAstConsumer
     merged_blocked.insert(blocked_types.begin(), blocked_types.end());
     instantiated_template_visitor_.ScanInstantiatedType(&node, resugar_map,
                                                         merged_blocked);
+  }
+
+  set<const Type*> ExpandTplSpecComponentTypes(
+      const TemplateSpecializationType* type) {
+    // TODO: Heh, this might be harder than I thought.
+    return set<const Type*>();
   }
 
   const set<const Type*>& GetBlockedTypes() const {
