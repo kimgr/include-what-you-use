@@ -11,6 +11,7 @@
 // argv.
 
 // Everything below is adapted from clang/examples/clang-interpreter/main.cpp.
+#include "iwyu_driver.h"
 
 #include <cctype>
 #include <cstdint>
@@ -238,6 +239,23 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
     return nullptr;
 
   return compiler;
+}
+
+int ExecuteAction(int argc, const char** argv,
+                  IwyuActionFactory create_action) {
+  std::unique_ptr<clang::CompilerInstance> compiler(
+      CreateCompilerInstance(argc, argv));
+  if (!compiler) {
+    return EXIT_FAILURE;
+  }
+
+  // Create the IWYU frontend action and execute it through the compiler.
+  std::unique_ptr<clang::ASTFrontendAction> action = create_action();
+  if (!compiler->ExecuteAction(*action)) {
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
 }
 
 }  // namespace include_what_you_use
