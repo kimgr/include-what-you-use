@@ -192,8 +192,6 @@ int ExecuteAction(int argc, const char** argv, IwyuActionFactory make_action) {
   if (!compilation)
     return EXIT_FAILURE;
 
-  ParseToolChain(compilation->getDefaultToolChain());
-
   // FIXME: This is copied from ASTUnit.cpp; simplify and eliminate.
 
   // We expect to get back exactly one command job, if we didn't something
@@ -239,7 +237,8 @@ int ExecuteAction(int argc, const char** argv, IwyuActionFactory make_action) {
     return EXIT_FAILURE;
 
   // Create the IWYU frontend action and execute it through the compiler.
-  std::unique_ptr<clang::ASTFrontendAction> action = make_action();
+  const ToolChain& toolchain = compilation->getDefaultToolChain();
+  std::unique_ptr<clang::ASTFrontendAction> action = make_action(toolchain);
   if (!compiler->ExecuteAction(*action)) {
     return EXIT_FAILURE;
   }

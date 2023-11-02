@@ -138,6 +138,10 @@
 namespace clang {
 class FileEntry;
 class PPCallbacks;
+
+namespace driver {
+class ToolChain;
+}
 }  // namespace clang
 
 namespace include_what_you_use {
@@ -219,6 +223,7 @@ using clang::UsingDirectiveDecl;
 using clang::UsingShadowDecl;
 using clang::ValueDecl;
 using clang::VarDecl;
+using clang::driver::ToolChain;
 using llvm::cast;
 using llvm::dyn_cast;
 using llvm::dyn_cast_or_null;
@@ -4309,11 +4314,18 @@ class IwyuAstConsumer
 
 // We use an ASTFrontendAction to hook up IWYU with Clang.
 class IwyuAction : public ASTFrontendAction {
+ public:
+  IwyuAction(const ToolChain& toolchain)
+      : toolchain(toolchain) {
+  }
+
  protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(
       CompilerInstance& compiler,  // NOLINT
       llvm::StringRef /* dummy */) override {
-    // Do this first thing after getting our hands on a CompilerInstance.
+    // Do this first thing after getting our hands on initialized
+    // CompilerInstance and ToolChain instances.
+    ParseToolChain(toolchain);
     InitGlobals(compiler);
 
     auto* const preprocessor_consumer = new IwyuPreprocessorInfo();
@@ -4325,6 +4337,11 @@ class IwyuAction : public ASTFrontendAction {
         new VisitorState(&compiler, *preprocessor_consumer);
     return std::unique_ptr<IwyuAstConsumer>(new IwyuAstConsumer(visitor_state));
   }
+
+ private:
+  // ToolChain is not copyable, but it's owned by Compilation which has the same
+  // lifetime as CompilerInstance.
+  const ToolChain& toolchain;
 };
 
 } // namespace include_what_you_use
@@ -4351,5 +4368,7 @@ int main(int argc, char **argv) {
   //       CLANG_FLAGS... foo.cc
   OptionsParser options_parser(argc, argv);
   return ExecuteAction(options_parser.clang_argc(), options_parser.clang_argv(),
-                       []() { return std::make_unique<IwyuAction>(); });
+                       [](const clang::driver::ToolChain& toolchain) {
+                         return std::make_unique<IwyuAction>(toolchain);
+                       });
 }

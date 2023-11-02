@@ -15,11 +15,18 @@
 
 namespace clang {
 class ASTFrontendAction;
+
+namespace driver {
+class ToolChain;
+}
 }
 
 namespace include_what_you_use {
 
-typedef std::function<std::unique_ptr<clang::ASTFrontendAction>()>
+using clang::ASTFrontendAction;
+using clang::driver::ToolChain;
+
+typedef std::function<std::unique_ptr<ASTFrontendAction>(const ToolChain&)>
     IwyuActionFactory;
 
 // Use Clang's Driver to parse the command-line arguments and create a frontend
