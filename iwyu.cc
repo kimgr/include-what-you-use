@@ -4315,8 +4315,7 @@ class IwyuAstConsumer
 // We use an ASTFrontendAction to hook up IWYU with Clang.
 class IwyuAction : public ASTFrontendAction {
  public:
-  IwyuAction(const ToolChain& toolchain)
-      : toolchain(toolchain) {
+  IwyuAction(const ToolChain& toolchain) : toolchain(toolchain) {
   }
 
  protected:
