@@ -4324,8 +4324,7 @@ class IwyuAction : public ASTFrontendAction {
       llvm::StringRef /* dummy */) override {
     // Do this first thing after getting our hands on initialized
     // CompilerInstance and ToolChain instances.
-    ParseToolChain(toolchain);
-    InitGlobals(compiler);
+    InitGlobals(compiler, toolchain);
 
     auto* const preprocessor_consumer = new IwyuPreprocessorInfo();
     compiler.getPreprocessor().addPPCallbacks(
