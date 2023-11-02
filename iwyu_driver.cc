@@ -158,7 +158,7 @@ void ExpandArgv(int argc, const char **argv,
 
 }  // anonymous namespace
 
-CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
+int ExecuteAction(int argc, const char** argv, IwyuActionFactory make_action) {
   std::string path = GetExecutablePath(argv[0]);
   IntrusiveRefCntPtr<DiagnosticOptions> diagnostic_options =
     new DiagnosticOptions;
@@ -190,7 +190,7 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
 
   unique_ptr<Compilation> compilation(driver.BuildCompilation(args));
   if (!compilation)
-    return nullptr;
+    return EXIT_FAILURE;
 
   ParseToolChain(compilation->getDefaultToolChain());
 
@@ -204,13 +204,13 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
     raw_svector_ostream out(msg);
     jobs.Print(out, "; ", true);
     diagnostics.Report(clang::diag::err_fe_expected_compiler_job) << out.str();
-    return nullptr;
+    return EXIT_FAILURE;
   }
 
   const Command& command = cast<Command>(*jobs.begin());
   if (StringRef(command.getCreator().getName()) != "clang") {
     diagnostics.Report(clang::diag::err_fe_expected_clang_command);
-    return nullptr;
+    return EXIT_FAILURE;
   }
 
   // Initialize a compiler invocation object from the clang (-cc1) arguments.
@@ -236,21 +236,10 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   // Create the compilers actual diagnostics engine.
   compiler->createDiagnostics();
   if (!compiler->hasDiagnostics())
-    return nullptr;
-
-  return compiler;
-}
-
-int ExecuteAction(int argc, const char** argv,
-                  IwyuActionFactory create_action) {
-  std::unique_ptr<clang::CompilerInstance> compiler(
-      CreateCompilerInstance(argc, argv));
-  if (!compiler) {
     return EXIT_FAILURE;
-  }
 
   // Create the IWYU frontend action and execute it through the compiler.
-  std::unique_ptr<clang::ASTFrontendAction> action = create_action();
+  std::unique_ptr<clang::ASTFrontendAction> action = make_action();
   if (!compiler->ExecuteAction(*action)) {
     return EXIT_FAILURE;
   }

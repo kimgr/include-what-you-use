@@ -4335,7 +4335,6 @@ class IwyuAction : public ASTFrontendAction {
 
 using include_what_you_use::OptionsParser;
 using include_what_you_use::IwyuAction;
-using include_what_you_use::CreateCompilerInstance;
 using include_what_you_use::ExecuteAction;
 
 int main(int argc, char **argv) {

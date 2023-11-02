@@ -15,7 +15,6 @@
 
 namespace clang {
 class ASTFrontendAction;
-class CompilerInstance;
 }
 
 namespace include_what_you_use {
@@ -23,11 +22,10 @@ namespace include_what_you_use {
 typedef std::function<std::unique_ptr<clang::ASTFrontendAction>()>
     IwyuActionFactory;
 
-// Creates a CompilerInstance object based on the commandline
-// arguments, or NULL if there's an error of some sort.
-clang::CompilerInstance* CreateCompilerInstance(int argc, const char **argv);
-
-int ExecuteAction(int argc, const char** argv, IwyuActionFactory create_action);
+// Use Clang's Driver to parse the command-line arguments and create a frontend
+// action through which we can execute IWYU.
+// IWYU action is injected via a factory callback.
+int ExecuteAction(int argc, const char** argv, IwyuActionFactory make_action);
 
 }  // namespace include_what_you_use
 
