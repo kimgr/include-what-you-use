@@ -173,6 +173,44 @@ bool HasPreprocessOnlyArgs(ArrayRef<const char*> args) {
   return llvm::any_of(args, is_preprocess_only);
 }
 
+std::vector<const Command*> FilterJobs(const JobList& jobs) {
+  bool seen_actions[Action::JobClassLast + 1] = {};
+
+  std::vector<const Command*> res;
+  for (const auto& job : jobs) {
+    const Action& action = job.getSource();
+    if (action.getKind() != Action::CompileJobClass &&
+        action.getKind() != Action::PreprocessJobClass) {
+      errs() << "warning: ignoring unsupported job type: "
+             << action.getClassName() << "\n";
+      continue;
+    }
+
+    StringRef tool = job.getCreator().getName();
+    if (tool != "clang") {
+      errs() << "warning: ignoring job from unexpected tool: " << tool << "\n";
+      continue;
+    }
+
+    Action::OffloadKind offload_kind = action.getOffloadingDeviceKind();
+    if (offload_kind != Action::OFK_None) {
+      errs() << "warning: ignoring offload job for device toolchain: "
+             << action.GetOffloadKindName(offload_kind) << "\n";
+      continue;
+    }
+
+    if (seen_actions[action.getKind()]) {
+      errs() << "warning: ignoring repeated job type: "
+             << action.getClassName() << "\n";
+      continue;
+    }
+
+    seen_actions[action.getKind()] = true;
+    res.push_back(&job);
+  }
+  return res;
+}
+
 }  // anonymous namespace
 
 bool ExecuteAction(int argc, const char** argv,
@@ -214,24 +252,38 @@ bool ExecuteAction(int argc, const char** argv,
   if (!compilation)
     return false;
 
-  // FIXME: This is copied from ASTUnit.cpp; simplify and eliminate.
+  const JobList& jobs = compilation->getJobs();
+  // for (const auto& job : jobs) {
+  //   bool hostOffload =
+  //       job.getSource().getOffloadingHostActiveKinds() != Action::OFK_None;
+  //   bool deviceOffload =
+  //       job.getSource().getOffloadingDeviceKind() != Action::OFK_None;
+  //   errs() << "job: " << job.getCreator().getName() << ": "
+  //          << job.getSource().getClassName() << " ("
+  //          << "host offload: " << (hostOffload ? "yes" : "no") << ", "
+  //          << "device offload: " << (deviceOffload ? "yes" : "no")
+  //          << ")\n";
+  //   // job->Print(errs(), "\n", false);
+  // }
+  // //   return false;
+
+  // Filter out jobs we don't care about
+  std::vector<const Command*> ourjobs = FilterJobs(jobs);
 
   // We expect to get back exactly one command job, if we didn't something
-  // failed. Extract that job from the compilation.
-  const JobList& jobs = compilation->getJobs();
-  if (jobs.size() != 1 || !isa<Command>(*jobs.begin())) {
-    SmallString<256> msg;
-    raw_svector_ostream out(msg);
-    jobs.Print(out, "; ", true);
-    diagnostics.Report(clang::diag::err_fe_expected_compiler_job) << out.str();
+  // failed.
+  if (ourjobs.empty()) {
+    diagnostics.Report(clang::diag::err_fe_expected_compiler_job);
     return false;
   }
 
-  const Command& command = cast<Command>(*jobs.begin());
-  if (StringRef(command.getCreator().getName()) != "clang") {
-    diagnostics.Report(clang::diag::err_fe_expected_clang_command);
-    return false;
+  if (ourjobs.size() > 1) {
+    // If this triggers, there's a good chance FilterJobs could be improved to
+    // filter out the extra jobs.
+    errs() << "warning: ignoring " << ourjobs.size() - 1 << " jobs\n";
   }
+
+  const Command& command = *ourjobs[0];
 
   // Initialize a compiler invocation object from the clang (-cc1) arguments.
   const ArgStringList& cc_arguments = command.getArguments();
