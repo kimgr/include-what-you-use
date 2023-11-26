@@ -186,16 +186,16 @@ std::vector<const Command*> FilterJobs(const JobList& jobs) {
       continue;
     }
 
-    StringRef tool = job.getCreator().getName();
-    if (tool != "clang") {
-      errs() << "warning: ignoring job from unexpected tool: " << tool << "\n";
-      continue;
-    }
-
     Action::OffloadKind offload_kind = action.getOffloadingDeviceKind();
     if (offload_kind != Action::OFK_None) {
       errs() << "warning: ignoring offload job for device toolchain: "
              << action.GetOffloadKindName(offload_kind) << "\n";
+      continue;
+    }
+
+    StringRef tool = job.getCreator().getName();
+    if (tool != "clang") {
+      errs() << "warning: ignoring job from unexpected tool: " << tool << "\n";
       continue;
     }
 
