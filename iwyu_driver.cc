@@ -20,6 +20,8 @@
 #include <string>
 #include <utility>
 
+#include "iwyu_verrs.h"
+
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
@@ -181,27 +183,28 @@ std::vector<const Command*> FilterJobs(const JobList& jobs) {
     const Action& action = job.getSource();
     if (action.getKind() != Action::CompileJobClass &&
         action.getKind() != Action::PreprocessJobClass) {
-      errs() << "warning: ignoring unsupported job type: "
-             << action.getClassName() << "\n";
+      VERRS(2) << "warning: ignoring unsupported job type: "
+               << action.getClassName() << "\n";
       continue;
     }
 
     Action::OffloadKind offload_kind = action.getOffloadingDeviceKind();
     if (offload_kind != Action::OFK_None) {
-      errs() << "warning: ignoring offload job for device toolchain: "
-             << action.GetOffloadKindName(offload_kind) << "\n";
+      VERRS(2) << "warning: ignoring offload job for device toolchain: "
+               << action.GetOffloadKindName(offload_kind) << "\n";
       continue;
     }
 
     StringRef tool = job.getCreator().getName();
     if (tool != "clang") {
-      errs() << "warning: ignoring job from unexpected tool: " << tool << "\n";
+      VERRS(2) << "warning: ignoring job from unexpected tool: " << tool
+               << "\n";
       continue;
     }
 
     if (seen_actions[action.getKind()]) {
-      errs() << "warning: ignoring repeated job type: "
-             << action.getClassName() << "\n";
+      VERRS(2) << "warning: ignoring repeated job type: "
+               << action.getClassName() << "\n";
       continue;
     }
 
@@ -262,7 +265,7 @@ bool ExecuteAction(int argc, const char** argv,
   // If we have more than one job after filtering, there's a good chance
   // FilterJobs could be improved to filter out the extra jobs.
   if (ourjobs.size() > 1) {
-    errs() << "warning: ignoring " << ourjobs.size() - 1 << " jobs\n";
+    VERRS(2) << "warning: ignoring " << ourjobs.size() - 1 << " jobs\n";
   }
 
   const Command& command = *ourjobs[0];
