@@ -230,20 +230,17 @@ bool ExecuteAction(int argc, const char** argv,
   // Expand out any response files passed on the command line
   set<std::string> SavedStrings;
   SmallVector<const char*, 256> args;
-
   ExpandArgv(argc, argv, args, SavedStrings);
 
-  // Drop -save-temps arguments to avoid multiple compilation jobs.
+  // Drop -save-temps arguments to avoid extra preprocess job.
   llvm::erase_if(args, [](StringRef arg) {
     return arg.startswith("-save-temps") || arg.startswith("--save-temps");
   });
 
-  // FIXME: This is a hack to try to force the driver to do something we can
-  // recognize. We need to extend the driver library to support this use model
-  // (basically, exactly one input, and the operation mode is hard wired).
+  // We support preprocess jobs and compile jobs. For the latter, add
+  // -fsyntax-only to avoid code generation and disable 'unused argument'
+  // warnings as a result of -fsyntax-only.
   if (!HasPreprocessOnlyArgs(args)) {
-    // Add -fsyntax-only to avoid code generation and disable 'unused argument'
-    // warnings as a result of -fsyntax-only.
     args.push_back("-fsyntax-only");
     args.push_back("-Qunused-arguments");
   }
@@ -252,34 +249,19 @@ bool ExecuteAction(int argc, const char** argv,
   if (!compilation)
     return false;
 
+  // Get the jobs out of compilation and filter them.
   const JobList& jobs = compilation->getJobs();
-  // for (const auto& job : jobs) {
-  //   bool hostOffload =
-  //       job.getSource().getOffloadingHostActiveKinds() != Action::OFK_None;
-  //   bool deviceOffload =
-  //       job.getSource().getOffloadingDeviceKind() != Action::OFK_None;
-  //   errs() << "job: " << job.getCreator().getName() << ": "
-  //          << job.getSource().getClassName() << " ("
-  //          << "host offload: " << (hostOffload ? "yes" : "no") << ", "
-  //          << "device offload: " << (deviceOffload ? "yes" : "no")
-  //          << ")\n";
-  //   // job->Print(errs(), "\n", false);
-  // }
-  // //   return false;
-
-  // Filter out jobs we don't care about
   std::vector<const Command*> ourjobs = FilterJobs(jobs);
 
-  // We expect to get back exactly one command job, if we didn't something
-  // failed.
+  // We expect to get back at least one command job.
   if (ourjobs.empty()) {
     diagnostics.Report(clang::diag::err_fe_expected_compiler_job);
     return false;
   }
 
+  // If we have more than one job after filtering, there's a good chance
+  // FilterJobs could be improved to filter out the extra jobs.
   if (ourjobs.size() > 1) {
-    // If this triggers, there's a good chance FilterJobs could be improved to
-    // filter out the extra jobs.
     errs() << "warning: ignoring " << ourjobs.size() - 1 << " jobs\n";
   }
 
@@ -297,8 +279,6 @@ bool ExecuteAction(int argc, const char** argv,
     jobs.Print(errs(), "\n", true);
     errs() << "\n";
   }
-
-  // FIXME: This is copied from cc1_main.cpp; simplify and eliminate.
 
   // Create a compiler instance to handle the actual work.
   unique_ptr<CompilerInstance> compiler(new CompilerInstance);
