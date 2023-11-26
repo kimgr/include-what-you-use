@@ -203,11 +203,11 @@ bool ExecuteAction(int argc, const char** argv,
   // FIXME: This is a hack to try to force the driver to do something we can
   // recognize. We need to extend the driver library to support this use model
   // (basically, exactly one input, and the operation mode is hard wired).
-
-  // Add -fsyntax-only to avoid code generation, unless user asked for
-  // preprocessing-only.
   if (!HasPreprocessOnlyArgs(args)) {
+    // Add -fsyntax-only to avoid code generation and disable 'unused argument'
+    // warnings as a result of -fsyntax-only.
     args.push_back("-fsyntax-only");
+    args.push_back("-Qunused-arguments");
   }
 
   unique_ptr<Compilation> compilation(driver.BuildCompilation(args));
