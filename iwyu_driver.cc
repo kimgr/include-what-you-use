@@ -254,23 +254,34 @@ bool ExecuteAction(int argc, const char** argv,
 
   // Get the jobs out of compilation and filter them.
   const JobList& jobs = compilation->getJobs();
-  std::vector<const Command*> ourjobs = FilterJobs(jobs);
+  std::vector<const Command*> filtered_jobs = FilterJobs(jobs);
 
   // We expect to get back at least one command job.
-  if (ourjobs.empty()) {
+  if (filtered_jobs.empty()) {
     diagnostics.Report(clang::diag::err_fe_expected_compiler_job);
     return false;
   }
 
   // If we have more than one job after filtering, there's a good chance
-  // FilterJobs could be improved to filter out the extra jobs.
-  if (ourjobs.size() > 1) {
-    VERRS(2) << "warning: ignoring " << ourjobs.size() - 1 << " jobs\n";
+  // FilterJobs could be improved to prune the extra jobs.
+  if (filtered_jobs.size() > 1) {
+    if (ShouldPrint(2)) {
+      errs() << "warning: ignoring " << filtered_jobs.size() - 1
+             << " extra jobs:\n";
+
+      bool first = true;
+      for (const Command* command : filtered_jobs) {
+        if (first) {
+          first = false;
+          continue;
+        }
+        command->Print(errs(), "\n", true);
+      }
+    }
   }
 
-  const Command& command = *ourjobs[0];
-
   // Initialize a compiler invocation object from the clang (-cc1) arguments.
+  const Command& command = *filtered_jobs[0];
   const ArgStringList& cc_arguments = command.getArguments();
   std::shared_ptr<CompilerInvocation> invocation(new CompilerInvocation);
   CompilerInvocation::CreateFromArgs(*invocation, cc_arguments, diagnostics);
