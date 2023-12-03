@@ -214,20 +214,28 @@ std::vector<const Command*> FilterJobs(const JobList& jobs) {
   return res;
 }
 
+llvm::raw_ostream& operator<<(llvm::raw_ostream& s, const Command& job) {
+  s << job.getSource().getClassName() << ":";
+  job.Print(s, "", false);
+  return s;
+}
+
 std::string JobsToString(const JobList& jobs) {
-    SmallString<256> msg;
-    raw_svector_ostream out(msg);
-    jobs.Print(out, "\n", true);
-    return std::string(msg);
+  SmallString<256> msg;
+  raw_svector_ostream out(msg);
+  for (const Command& job : jobs) {
+    out << job << "\n";
+  }
+  return std::string(msg);
 }
 
 std::string JobsToString(ArrayRef<const Command*> jobs) {
-    SmallString<256> msg;
-    raw_svector_ostream out(msg);
-    for (const Command* job : jobs) {
-      job->Print(out, "\n", true);
-    }
-    return std::string(msg);
+  SmallString<256> msg;
+  raw_svector_ostream out(msg);
+  for (const Command* job : jobs) {
+    out << *job << "\n";
+  }
+  return std::string(msg);
 }
 
 }  // anonymous namespace
@@ -324,8 +332,7 @@ bool ExecuteAction(int argc, const char** argv,
 
     default:
       errs() << "error: expected compiler or preprocessor job, found: "
-             << command.getSource().getClassName() << ":\n";
-      command.Print(errs(), "\n", true);
+             << command << "\n";
       return false;
   }
 
