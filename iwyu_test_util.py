@@ -706,13 +706,14 @@ def TestIwyuOnRelativeFile(cc_file, cpp_files_to_check, verbose=False):
                          (expected_exit_code, exit_code))
 
   # Check driver diagnostics
-  failures += _CompareExpectedAndActualDriverDiagnostics(
+  failures = _CompareExpectedAndActualDriverDiagnostics(
       _GetExpectedDriverDiagnosticRegexes(cc_file),
       _GetActualDriverDiagnostics(output))
 
+  # Check IWYU diagnostics
   expected_diagnostics = _GetMatchingLines(
       _EXPECTED_DIAGNOSTICS_RE, cpp_files_to_check)
-  failures = _CompareExpectedAndActualDiagnostics(
+  failures += _CompareExpectedAndActualDiagnostics(
       _GetExpectedDiagnosticRegexes(expected_diagnostics),
       _GetActualDiagnostics(output))
 
