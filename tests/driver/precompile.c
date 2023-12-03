@@ -12,7 +12,8 @@
 
 // IWYU_ARGS: -target aarch64-unknown-gnu-linux --print-supported-extensions
 
-// IWYU_DRIVER: expected data or algorithm...*
+// IWYU_DRIVER: ignoring unsupported job type
+// IWYU_DRIVER: unable to.*, expected exactly one compiler job in.*precompiler
 
 /**** IWYU_SUMMARY(1)
 
