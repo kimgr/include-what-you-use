@@ -179,7 +179,7 @@ std::vector<const Command*> FilterJobs(const JobList& jobs) {
   bool seen_actions[Action::JobClassLast + 1] = {};
 
   std::vector<const Command*> res;
-  for (const auto& job : jobs) {
+  for (const Command& job : jobs) {
     const Action& action = job.getSource();
     if (action.getKind() != Action::CompileJobClass &&
         action.getKind() != Action::PreprocessJobClass) {
@@ -282,7 +282,7 @@ bool ExecuteAction(int argc, const char** argv,
   // If we have more than one job after filtering, there's a good chance
   // FilterJobs could be improved to prune the extra jobs. Log them at level 2.
   if (filtered_jobs.size() > 1 && ShouldPrint(2)) {
-    auto extra_jobs = ArrayRef(filtered_jobs).drop_front(1);
+    auto extra_jobs = ArrayRef<const Command*>(filtered_jobs).drop_front(1);
     errs() << "warning: ignoring " << extra_jobs.size() << " extra jobs:\n"
            << JobsToString(extra_jobs) << "\n";
   }
