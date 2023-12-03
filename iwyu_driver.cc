@@ -214,6 +214,22 @@ std::vector<const Command*> FilterJobs(const JobList& jobs) {
   return res;
 }
 
+std::string JobsToString(const JobList& jobs) {
+    SmallString<256> msg;
+    raw_svector_ostream out(msg);
+    jobs.Print(out, "\n", true);
+    return std::string(msg);
+}
+
+std::string JobsToString(ArrayRef<const Command*> jobs) {
+    SmallString<256> msg;
+    raw_svector_ostream out(msg);
+    for (const Command* job : jobs) {
+      job->Print(out, "\n", true);
+    }
+    return std::string(msg);
+}
+
 }  // anonymous namespace
 
 bool ExecuteAction(int argc, const char** argv,
@@ -258,7 +274,8 @@ bool ExecuteAction(int argc, const char** argv,
 
   // We expect to get back at least one command job.
   if (filtered_jobs.empty()) {
-    diagnostics.Report(clang::diag::err_fe_expected_compiler_job);
+    diagnostics.Report(clang::diag::err_fe_expected_compiler_job)
+        << JobsToString(jobs);
     return false;
   }
 
@@ -266,10 +283,8 @@ bool ExecuteAction(int argc, const char** argv,
   // FilterJobs could be improved to prune the extra jobs. Log them at level 2.
   if (filtered_jobs.size() > 1 && ShouldPrint(2)) {
     auto extra_jobs = ArrayRef(filtered_jobs).drop_front(1);
-    errs() << "warning: ignoring " << extra_jobs.size() << " extra jobs:\n";
-    for (const Command* command : extra_jobs) {
-      command->Print(errs(), "\n", true);
-    }
+    errs() << "warning: ignoring " << extra_jobs.size() << " extra jobs:\n"
+           << JobsToString(extra_jobs) << "\n";
   }
 
   // Initialize a compiler invocation object from the clang (-cc1) arguments.
@@ -282,7 +297,7 @@ bool ExecuteAction(int argc, const char** argv,
   // Show the invocation, with -v.
   if (invocation->getHeaderSearchOpts().Verbose) {
     errs() << "clang invocation:\n";
-    jobs.Print(errs(), "\n", true);
+    errs() << JobsToString(jobs);
     errs() << "\n";
   }
 
@@ -308,7 +323,8 @@ bool ExecuteAction(int argc, const char** argv,
       break;
 
     default:
-      errs() << "error: expected compiler or preprocessor job, found:\n";
+      errs() << "error: expected compiler or preprocessor job, found: "
+             << command.getSource().getClassName() << ":\n";
       command.Print(errs(), "\n", true);
       return false;
   }
