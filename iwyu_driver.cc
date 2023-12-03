@@ -263,20 +263,12 @@ bool ExecuteAction(int argc, const char** argv,
   }
 
   // If we have more than one job after filtering, there's a good chance
-  // FilterJobs could be improved to prune the extra jobs.
-  if (filtered_jobs.size() > 1) {
-    if (ShouldPrint(2)) {
-      errs() << "warning: ignoring " << filtered_jobs.size() - 1
-             << " extra jobs:\n";
-
-      bool first = true;
-      for (const Command* command : filtered_jobs) {
-        if (first) {
-          first = false;
-          continue;
-        }
-        command->Print(errs(), "\n", true);
-      }
+  // FilterJobs could be improved to prune the extra jobs. Log them at level 2.
+  if (filtered_jobs.size() > 1 && ShouldPrint(2)) {
+    auto extra_jobs = ArrayRef(filtered_jobs).drop_front(1);
+    errs() << "warning: ignoring " << extra_jobs.size() << " extra jobs:\n";
+    for (const Command* command : extra_jobs) {
+      command->Print(errs(), "\n", true);
     }
   }
 
