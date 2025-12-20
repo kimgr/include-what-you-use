@@ -30,6 +30,7 @@
 #include "iwyu_ast_util.h"
 #include "iwyu_globals.h"
 #include "iwyu_include_picker.h"
+#include "iwyu_lexer_utils.h"
 #include "iwyu_location_util.h"
 #include "iwyu_path_util.h"
 #include "iwyu_preprocessor.h"
@@ -496,6 +497,20 @@ string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
   policy.PolishForDeclaration = true;
   decl->print(ostream, policy);
   ostream.flush();
+
+  llvm::errs() << __func__ << ": " << line << "\n";
+
+  llvm::errs() << __func__ << ": relexing\n";
+  SourceLocation start;
+  clang::Lexer lexer(start, decl->getASTContext().getLangOpts(),
+                     line.data(), line.data(), line.data() + line.size());
+  clang::Token t;
+  while (!lexer.LexFromRawLexer(t)) {
+    unsigned offset = t.getLocation().getRawEncoding() - start.getRawEncoding();    
+    llvm::errs() << " found token: " << t.getName() << ": "
+                 << string(&line[offset], t.getLength()) << "\n";
+  }
+  llvm::errs() << __func__ << ": end of relexing\n";
 
   // Remove "final" specifier, it isn't allowed for forward declarations.
   ReplaceAll(&line, " final ", " ");
