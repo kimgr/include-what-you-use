@@ -122,6 +122,12 @@ class ASTNode {
   ASTNode(const clang::TemplateArgumentLoc* template_argloc)
       : kind_(kTemplateArgumentLocKind), as_template_argloc_(template_argloc),
         parent_(nullptr), in_fwd_decl_context_(false) { }
+  ASTNode(const clang::DeclarationNameInfo* name_info)
+      : kind_(kDeclarationNameInfo),
+        as_decl_name_info_(name_info),
+        parent_(nullptr),
+        in_fwd_decl_context_(false) {
+  }
 
   // A 'forward-declare' context means some parent of us can be
   // forward-declared, which means we can be too.  e.g. in
@@ -262,8 +268,16 @@ class ASTNode {
 
  private:
   enum NodeKind {
-    kDeclKind, kStmtKind, kTypeKind, kTypelocKind, kNNSKind, kNNSLocKind,
-    kTemplateNameKind, kTemplateArgumentKind, kTemplateArgumentLocKind
+    kDeclKind,
+    kStmtKind,
+    kTypeKind,
+    kTypelocKind,
+    kNNSKind,
+    kNNSLocKind,
+    kTemplateNameKind,
+    kTemplateArgumentKind,
+    kTemplateArgumentLocKind,
+    kDeclarationNameInfo
   };
 
   // Returns a casted pointer if this object actually is of the given
@@ -339,6 +353,12 @@ class ASTNode {
       return nullptr;
     return as_template_argloc_;
   }
+  template <typename To>
+  const To* DynCast(const clang::DeclarationNameInfo*) const {
+    if (kind_ != kDeclarationNameInfo)
+      return nullptr;
+    return as_decl_name_info_;
+  }
   // We also allow casting to void*
   template<typename Ignored> const void* DynCast(const void*) const {
     switch (kind_) {   // this is just to avoid aliasing violations.
@@ -360,6 +380,8 @@ class ASTNode {
         return as_template_arg_;
       case kTemplateArgumentLocKind:
         return as_template_argloc_;
+      case kDeclarationNameInfo:
+        return as_decl_name_info_;
     }
     CHECK_UNREACHABLE_("Unknown kind");
   }
@@ -379,6 +401,7 @@ class ASTNode {
     const clang::TemplateName* as_template_name_;
     const clang::TemplateArgument* as_template_arg_;
     const clang::TemplateArgumentLoc* as_template_argloc_;
+    const clang::DeclarationNameInfo* as_decl_name_info_;
   };
   const ASTNode* parent_;
   bool in_fwd_decl_context_;

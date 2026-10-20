@@ -535,6 +535,18 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     return Base::TraverseTemplateArgumentLoc(argloc);
   }
 
+  bool TraverseDeclarationNameInfo(clang::DeclarationNameInfo name_info) {
+    ASTNode node(&name_info);
+    CurrentASTNodeUpdater canu(&current_ast_node_, &node);
+    if (ShouldPrintSymbolFromCurrentFile()) {
+      errs() << AnnotatedName("DeclarationNameInfo") << name_info.getAsString()
+             << "\n";
+    }
+    if (!this->getDerived().VisitDeclarationNameInfo(name_info))
+      return false;
+    return Base::TraverseDeclarationNameInfo(name_info);
+  }
+
   // We have a few Visit methods that RecursiveASTVisitor does not. Provide
   // empty default implementations.
   bool VisitNestedNameSpecifier(NestedNameSpecifier) {
@@ -550,6 +562,10 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool VisitTemplateArgumentLoc(const TemplateArgumentLoc&) {
+    return true;
+  }
+
+  bool VisitDeclarationNameInfo(clang::DeclarationNameInfo) {
     return true;
   }
 

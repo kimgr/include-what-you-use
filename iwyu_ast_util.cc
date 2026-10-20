@@ -353,6 +353,9 @@ bool ASTNode::FillLocationIfKnown(SourceLocation* loc) const {
     case kTemplateNameKind:
     case kTemplateArgumentKind:
       return false;
+    case kDeclarationNameInfo:
+      *loc = as_decl_name_info_->getLoc();
+      return true;
   }
   CHECK_UNREACHABLE_("Unexpected kind of ASTNode");
 }
