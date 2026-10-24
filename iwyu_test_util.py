@@ -208,8 +208,9 @@ def _GetIwyuPath():
   return _IWYU_PATH
 
 
-def _GetCommandOutput(command):
+def _GetCommandOutput(command, stdin_fileobj=None):
   p = subprocess.Popen(command,
+                       stdin=stdin_fileobj,
                        stdout=subprocess.PIPE,
                        stderr=subprocess.STDOUT)
   stdout, _ = p.communicate()
@@ -740,6 +741,73 @@ def TestIwyuOnRelativeFile(cc_file, cpp_files_to_check, verbose=False):
   # Also figure out if the end-of-parsing suggestions match up.
   failures += _CompareExpectedAndActualSummaries(
       _GetExpectedSummaries(files_to_check), actual_summaries)
+
+  if failures:
+    raise AssertionError(''.join(failures))
+
+
+def TestIwyuOnStdin(cc_file, verbose=False):
+  """Checks running IWYU on the given .cc file.
+
+  Args:
+    cc_file: The name of the file to test, relative to the current dir.
+    verbose: Whether to display verbose output.
+  """
+  # Parse and check IWYU_{REQUIRES,UNSUPPORTED}
+  _CheckPrerequisites(cc_file)
+
+  cmd = [_GetIwyuPath()]
+  # Require verbose level 3 so that we can verify the individual diagnostics.
+  # We allow the level to be overriden by
+  # * IWYU_ARGS comment in a test file
+  # * IWYU_VERBOSE environment variable
+  cmd += ['-Xiwyu', '--verbose=3']
+  cmd += _GetLaunchArguments(cc_file)
+  env_verbose_level = os.getenv('IWYU_VERBOSE')
+  if env_verbose_level:
+    cmd += ['-Xiwyu', '--verbose=' + env_verbose_level]
+  cmd += _GetExtraArgs()
+  cmd += '-'
+
+  if verbose:
+    print('>>> Running %s < %s' % (shlex.join(cmd), cc_file))
+
+  # Pass the file via stdin.
+  with open(cc_file, 'rt') as fobj:
+    exit_code, output = _GetCommandOutput(cmd, stdin_fileobj=fobj)
+  print(''.join(output))
+  sys.stdout.flush()      # don't commingle this output with the failure output
+
+  # Verify exit code if requested
+  expected_exit_code = _GetExpectedExitCode(cc_file)
+  if expected_exit_code is not None and exit_code != expected_exit_code:
+    raise AssertionError('Unexpected exit code, wanted %d, was %d' %
+                         (expected_exit_code, exit_code))
+
+  # Check diagnostics without location (from driver)
+  failures = _CompareExpectedAndActualNoLocDiagnostics(
+      _GetExpectedNoLocDiagnosticRegexes(cc_file),
+      _GetActualNoLocDiagnostics(output))
+
+  actual_summaries = _GetActualSummaries(output)
+  files_to_check = _CollectFilesToCheck([cc_file], actual_summaries)
+  
+  # Check IWYU diagnostics
+  expected_diagnostics = _GetMatchingLines(
+      _EXPECTED_DIAGNOSTICS_RE, files_to_check)
+  expected_diagnostics = {
+    ("<stdin>" if fname == cc_file else fname, line): diag
+    for (fname, line), diag in expected_diagnostics.items()
+  }
+  failures += _CompareExpectedAndActualDiagnostics(
+      _GetExpectedDiagnosticRegexes(expected_diagnostics),
+      _GetActualDiagnostics(output))
+
+  # Also figure out if the end-of-parsing suggestions match up.
+  expected_summaries = _GetExpectedSummaries(files_to_check)
+  expected_summaries["<stdin>"] = expected_summaries.pop(cc_file)
+  failures += _CompareExpectedAndActualSummaries(
+      expected_summaries, actual_summaries)
 
   if failures:
     raise AssertionError(''.join(failures))

@@ -369,7 +369,8 @@ if (Python3_Interpreter_FOUND)
   # Map the various IWYU test scripts to CTest tests.
   function(iwyu_add_test name file)
     add_test(NAME ${name}
-      COMMAND ${Python3_EXECUTABLE} run_iwyu_tests.py --run-test-file=${file}
+      COMMAND ${Python3_EXECUTABLE} run_iwyu_tests.py
+      --run-test-file=${name}:${file}
       -- $<TARGET_FILE:include-what-you-use>
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
@@ -384,6 +385,7 @@ if (Python3_Interpreter_FOUND)
   string(REPLACE "\n" ";" test_names_list ${test_names_and_files})
   foreach (test_name_and_file IN ITEMS ${test_names_list})
     string(REPLACE ":" ";" test_name_and_file ${test_name_and_file})
+    # message(STATUS "adding: ${test_name_and_file}")
     iwyu_add_test(${test_name_and_file})
   endforeach()
 

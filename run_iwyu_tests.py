@@ -40,8 +40,12 @@ def Partition(l, delimiter):
   return l[:delim_index], l[delim_index+1:]
 
 
-def TestIwyuOnRelevantFiles(filename):
+def TestIwyuOnRelevantFiles(suite, filename):
   logging.info('Testing iwyu on %s', filename)
+
+  if suite == 'stdin':
+    return iwyu_test_util.TestIwyuOnStdin(filename, verbose=True)
+
   # Split full/path/to/foo.cc into full/path/to/foo and .cc.
   (all_but_extension, extension) = os.path.splitext(filename)
   (dirname, basename) = os.path.split(all_but_extension)
@@ -90,7 +94,8 @@ def AddTestMethods(cls, rootdir, patterns):
     while hasattr(cls, test_name):   # already have a class with that name
       test_name += '2'               # just append a suffix :-)
 
-    setattr(cls, test_name, lambda x, f=filename: TestIwyuOnRelevantFiles(f))
+    setattr(cls, test_name,
+            lambda x, f=filename: TestIwyuOnRelevantFiles(cls.__name__, f))
 
     if iwyu_test_util.IsTestExpectedToFail(filename):
       test_item = getattr(cls, test_name)
@@ -117,15 +122,16 @@ def PrintLoadedTestsAndFiles():
     print('%s.%s:%s' % (cls.__name__, test, cls.test_files[test]))
 
 
-def RunTestFile(cc_file):
+def RunTestFile(test_name, cc_file):
   """ Executes the test for cc_file, independent of unittest infra.
   Returns an appropriate exit code for the process. 0 for success, 1
   for failure, 77 if the test was skipped. If the test failed, an
   exception will have been raised (causing a non-zero exit code).
   """
+  suite, _, _ = test_name.partition('.')
   xfail = iwyu_test_util.IsTestExpectedToFail(cc_file)
   try:
-    TestIwyuOnRelevantFiles(cc_file)
+    TestIwyuOnRelevantFiles(suite, cc_file)
   except unittest.SkipTest as e:
     # Catch the skip test exception that unittest would normally handle and
     # set an exit code that informs the test runner that test is being
@@ -176,11 +182,13 @@ if __name__ == '__main__':
   (runner_args, unittest_args) = parser.parse_known_args(unittest_args)
 
   if runner_args.run_test_file:
-    exit(RunTestFile(runner_args.run_test_file))
+    test_name, test_file = runner_args.run_test_file.split(':')
+    exit(RunTestFile(test_name, test_file))
 
   RegisterTestSuite('c', 'tests/c', patterns=['*.c'])
   RegisterTestSuite('cxx', 'tests/cxx', patterns=['*.cc'])
   RegisterTestSuite('driver', 'tests/driver', patterns=['*.c'])
+  RegisterTestSuite('stdin', 'tests/stdin', patterns=['*.c', '*.cc'])
 
   for suite in runner_args.extra_suites:
     RegisterTestSuite(suite, 'tests/' + suite, patterns=['*.c', '*.cc'])

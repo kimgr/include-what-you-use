@@ -7,8 +7,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -I .
+// IWYU_ARGS: -I . -xc++
 
 #include "tests/stdin/direct.h"
 
+// IWYU: MACRO is...*indirect.h
 int i = MACRO;
+
+/**** IWYU_SUMMARY
+
+<stdin> should add these lines:
+#include "tests/stdin/indirect.h"
+
+<stdin> should remove these lines:
+- #include "tests/stdin/direct.h"  // lines XX-XX
+
+The full include-list for <stdin>:
+#include "tests/stdin/indirect.h"  // for MACRO
+
+***** IWYU_SUMMARY */

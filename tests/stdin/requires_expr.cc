@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -std=c++20
+// IWYU_ARGS: -std=c++20 -xc++
 
 template <typename>
 concept Concept = true;
@@ -16,3 +16,9 @@ concept Concept = true;
 bool req_expr_result = requires {
   { 1 } -> Concept;
 };
+
+/**** IWYU_SUMMARY
+
+(<stdin> has correct #includes/fwd-decls)
+
+***** IWYU_SUMMARY */

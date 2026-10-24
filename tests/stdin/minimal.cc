@@ -7,6 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -I .
+// IWYU_ARGS: -I . -xc++
 
 int i;
+
+/**** IWYU_SUMMARY
+
+(<stdin> has correct #includes/fwd-decls)
+
+***** IWYU_SUMMARY */
